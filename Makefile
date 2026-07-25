@@ -9,12 +9,12 @@ setup:
 	$(PYTHON) -m pre_commit install
 
 lint:
-	$(PYTHON) -m ruff check src tests
-	$(PYTHON) -m ruff format --check src tests
+	$(PYTHON) -m ruff check src tests scripts
+	$(PYTHON) -m ruff format --check src tests scripts
 
 format:
-	$(PYTHON) -m ruff check --fix src tests
-	$(PYTHON) -m ruff format src tests
+	$(PYTHON) -m ruff check --fix src tests scripts
+	$(PYTHON) -m ruff format src tests scripts
 
 test:
 	$(PYTHON) -m pytest

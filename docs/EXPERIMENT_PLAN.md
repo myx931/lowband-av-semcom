@@ -16,6 +16,7 @@
 - 处理：探测元数据、拆分/引用音频、裁剪人脸、提取音频特征和关键点；已有输出默认跳过。
 - 输出：manifest，至少含 `sample_id`、`speaker_id`、`video_path`、`audio_path`、`fps`、`sample_rate`、`frame_count`、`split`，另含失败记录。
 - 验收：管线可重复运行，第二次运行不覆盖有效产物；正式划分按说话人隔离。
+- 状态：代码与合成闭环已实现；真实 `s1` pilot 等待用户手动提供 GRID 数据后验收。
 
 ## E2：运动提取与重建敏感性基线
 

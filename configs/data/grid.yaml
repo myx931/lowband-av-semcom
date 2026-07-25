@@ -1,7 +1,34 @@
 dataset: grid
 root: null  # Resolved from DATA_ROOT when unset.
-split: train
+raw_video_dir: grid/raw/video
+raw_audio_dir: grid/raw/audio
+manifest_path: grid/manifests/grid_subset.jsonl
+failure_dir: grid/manifests/failures
+processed_dir: grid/processed
+
+speakers: [s1]
+max_samples: 20
+split: pilot
+split_seed: 42
+validation_ratio: 0.1
+test_ratio: 0.1
+
 fps: 25
 audio_sample_rate: 16000
 image_size: 256
 speaker_isolated: true
+resume: true
+
+audio:
+  n_mels: 80
+  window_size: 400
+  hop_size: 160
+  n_fft: 512
+  mel_steps_per_video_frame: 4
+
+landmarks:
+  backend: mediapipe
+  min_detection_coverage: 0.95
+
+face_crop:
+  padding: 0.2
