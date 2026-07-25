@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lowband-av-semcom"
+version = "0.1.0"
+description = "Audio-assisted mouth-motion semantic transmission for low-bandwidth video conferencing."
+readme = "README.md"
+requires-python = ">=3.10,<3.12"
+dependencies = [
+  "numpy>=1.24,<3",
+  "PyYAML>=6.0,<7",
+  "torch>=2.1,<3",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers --strict-config"
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = [
+  "smoke: fast end-to-end sanity checks",
+]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.10"
+packages = ["av_semcom"]
+strict = true
+warn_unused_configs = true

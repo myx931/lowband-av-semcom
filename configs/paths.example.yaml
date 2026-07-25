@@ -1,0 +1,5 @@
+# Copy to configs/paths.local.yaml for machine-specific overrides.
+# Prefer setting DATA_ROOT instead of committing an absolute path.
+data_root: null
+output_root: outputs
+third_party_root: third_party

@@ -1,0 +1,3 @@
+type: awgn
+train_snr_db: 5
+test_snr_db: [-5, 0, 5, 10]

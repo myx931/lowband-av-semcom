@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Research scope and questions
+    url: https://github.com/myx931/lowband-av-semcom/blob/main/docs/RESEARCH_QUESTIONS.md
+    about: Check whether a proposed task contributes to one of the research questions.

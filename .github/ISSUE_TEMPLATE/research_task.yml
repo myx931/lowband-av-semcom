@@ -1,0 +1,52 @@
+name: Research task
+description: Plan a reproducible research or engineering task.
+title: "[Task]: "
+labels: ["research"]
+body:
+  - type: textarea
+    id: objective
+    attributes:
+      label: Research objective
+      description: Which research question or repository milestone does this address?
+    validations:
+      required: true
+  - type: textarea
+    id: inputs
+    attributes:
+      label: Inputs
+      description: List required data, configurations, models, or prior issues.
+    validations:
+      required: true
+  - type: textarea
+    id: outputs
+    attributes:
+      label: Outputs
+      description: List expected code, configuration, documentation, and result artifacts.
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: Link blocking issues and external requirements.
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Provide reproducible and testable completion criteria.
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks
+      description: Include data, compute, licensing, validity, and reproducibility risks.
+    validations:
+      required: true
+  - type: textarea
+    id: exclusions
+    attributes:
+      label: Not included
+      description: State explicit scope exclusions.
+    validations:
+      required: true

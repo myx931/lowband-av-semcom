@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+.venv/
+venv/
+
+# IDE and OS
+.idea/
+.vscode/
+.DS_Store
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+configs/paths.local.yaml
+*.pem
+*.key
+
+# Datasets and generated manifests
+data/*
+!data/README.md
+
+# Experiment outputs, logs, and checkpoints
+outputs/*
+!outputs/README.md
+logs/
+checkpoints/
+wandb/
+runs/
+*.ckpt
+*.pth
+*.pt
+*.onnx
+
+# Third-party source is added explicitly (prefer submodules)
+third_party/*
+!third_party/README.md
+
+# Media and archives
+*.mp4
+*.avi
+*.mov
+*.wav
+*.flac
+*.zip
+*.tar
+*.tar.gz
+*.tgz

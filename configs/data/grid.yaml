@@ -1,0 +1,7 @@
+dataset: grid
+root: null  # Resolved from DATA_ROOT when unset.
+split: train
+fps: 25
+audio_sample_rate: 16000
+image_size: 256
+speaker_isolated: true

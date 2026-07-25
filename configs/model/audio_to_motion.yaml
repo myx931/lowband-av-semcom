@@ -1,0 +1,15 @@
+name: gru
+hidden_dim: 256
+num_layers: 2
+dropout: 0.1
+
+motion:
+  representation: landmarks
+  landmark_indices: []
+  normalize: true
+
+audio:
+  feature_type: log_mel
+  n_mels: 80
+  window_size: 400
+  hop_size: 160

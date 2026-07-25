@@ -1,0 +1,47 @@
+experiment:
+  name: bootstrap_smoke
+  seed: 42
+  device: cpu
+  output_dir: outputs
+
+data:
+  root: null
+  dataset: grid
+  split: train
+  fps: 25
+  audio_sample_rate: 16000
+  image_size: 256
+
+motion:
+  representation: landmarks
+  landmark_indices: []
+  normalize: true
+
+audio:
+  feature_type: log_mel
+  n_mels: 80
+  window_size: 400
+  hop_size: 160
+
+model:
+  name: gru
+  hidden_dim: 256
+  num_layers: 2
+  dropout: 0.1
+
+channel:
+  type: awgn
+  train_snr_db: 5
+  test_snr_db: [-5, 0, 5, 10]
+
+selection:
+  strategy: none
+  keep_ratio: 1.0
+  top_k: null
+
+training:
+  batch_size: 16
+  learning_rate: 0.001
+  epochs: 50
+  num_workers: 4
+  mixed_precision: true
