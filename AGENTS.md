@@ -1,40 +1,97 @@
 # AGENTS.md
 
-本文件适用于整个仓库。
+## Project purpose
 
-## 研究目标与边界
+This repository supports a master's thesis prototype on low-bandwidth audiovisual semantic communication for video conferencing.
 
-- 保持主线：低带宽视频会议中的音频辅助嘴部运动残差语义传输。
-- 优先预训练模型、小型网络、离线特征和公开数据集。
-- 未经明确要求，不加入强化学习、扩散视频模型、多模态大模型、复杂调制、LDPC、OFDM 或完整通信协议栈。
-- 不虚构论文结论、实验指标、数据路径、模型权重或第三方集成状态。
-- 未阅读原文的文献内容标记为 `TODO`。
+The current research hypothesis is that audio can predict part of mouth motion, so the communication system should transmit only important mouth-motion prediction residuals instead of all visual motion features.
 
-## 工程约定
+## Research constraints
 
-- 使用 Python 3.10/3.11、PyTorch 和 `src` layout。
-- 所有 Python 公共函数与类包含类型注解；非显然模块和公共接口包含简洁 docstring。
-- 路径由 YAML 配置和环境变量管理，禁止提交机器专属绝对路径。
-- 所有随机实验必须接受并记录种子；配置应随实验产物保存。
-- 优先简单、可读、可测试的实现，避免在基线稳定前过度抽象。
-- 新模块应配套单元测试；外部模型适配器必须在缺少代码或权重时给出明确错误。
+* This is a master's graduation project, not a publication-oriented project.
+* Prefer feasibility, reproducibility, and clear ablations over novelty at any cost.
+* Maximum expected compute is approximately two RTX 3090 GPUs.
+* Every core experiment should preferably support a single-GPU configuration.
+* Use public datasets only.
+* Do not propose collecting or annotating a new dataset.
+* Do not train large generative models from scratch.
+* Do not introduce reinforcement learning unless explicitly requested.
+* Do not introduce diffusion video models, large multimodal models, or complex protocol stacks without approval.
+* Start with GRID and an AWGN channel.
+* Prefer low-dimensional facial or mouth motion representations.
+* Prefer pretrained reconstruction models through adapters.
+* Keep third-party code isolated in third_party/.
+* Do not commit datasets, checkpoints, credentials, caches, or experiment outputs.
 
-## 数据与产物安全
+## Development rules
 
-- 不自动下载完整数据集。
-- 不提交数据、模型权重、实验输出、缓存、凭据或密钥。
-- 数据划分必须按说话人隔离，防止身份泄漏。
-- 预处理默认跳过已有输出、支持断点恢复，并记录失败样本和原因。
-- 第三方代码优先通过 Git submodule 或独立安装说明接入，不复制来源不明代码。
+* Use Python 3.10 or 3.11 and PyTorch.
+* Use a src-layout package.
+* Use YAML configuration files.
+* Do not hard-code absolute paths.
+* All experiments must use fixed random seeds.
+* All new modules should have type hints.
+* Add unit tests for reusable logic.
+* Add a smoke test for every executable pipeline.
+* Run lint and tests before claiming completion.
+* Never report an experiment as successful without command output or saved results.
+* Never invent paper results, dataset statistics, pretrained weights, or benchmark numbers.
+* Mark unsupported assumptions as TODO.
+* Keep implementations minimal until the preceding milestone passes.
 
-## 提交前检查
+## Research implementation order
 
-运行：
+1. Repository and documentation.
+2. GRID subset preprocessing.
+3. Motion extraction.
+4. Reconstruction baseline.
+5. Audio-to-mouth-motion prediction.
+6. Prediction residual analysis.
+7. Sparse residual selection.
+8. AWGN and lightweight JSCC.
+9. Channel-aware learnable residual selection.
+10. Full comparison and ablation experiments.
 
-```bash
-make lint
-make test
-make smoke
-```
+Do not skip directly to later milestones.
 
-提交应聚焦单一里程碑。分支使用 `bootstrap/*`、`docs/*`、`data/*`、`baseline/*`、`feature/*`、`experiment/*`、`fix/*`，自动化代理可使用 `agent/*`。
+## Git workflow
+
+* Do not commit directly to main.
+* Use a dedicated branch for each milestone.
+* Keep commits small and descriptive.
+* Do not mix formatting-only changes with research logic.
+* Every pull request must state:
+
+  * what changed;
+  * why;
+  * how it was tested;
+  * known limitations;
+  * next step.
+
+## Data and artifact policy
+
+The following must remain outside normal Git tracking:
+
+* datasets;
+* extracted frames;
+* audio features;
+* checkpoints;
+* pretrained weights;
+* reconstructed videos;
+* logs;
+* TensorBoard files;
+* local environment files;
+* API keys.
+
+Only small demonstration assets explicitly approved by the user may be committed.
+
+## Communication style
+
+When reporting progress:
+
+* distinguish completed work from planned work;
+* show exact commands used;
+* include test results;
+* state unresolved assumptions;
+* recommend only one immediate next task;
+* do not expand the project scope without explicit approval.
