@@ -44,6 +44,7 @@ runs/
 # Third-party source is added explicitly (prefer submodules)
 third_party/*
 !third_party/README.md
+!third_party/LivePortrait
 
 # Media and archives
 *.mp4

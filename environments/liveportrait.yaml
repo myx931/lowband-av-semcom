@@ -1,0 +1,16 @@
+name: liveportrait
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python=3.10
+  - pip
+  - ffmpeg
+  - pytorch=2.3
+  - torchvision=0.18
+  - torchaudio=2.3
+  - pytorch-cuda=12.1
+  - pip:
+      - -r requirements/liveportrait.txt

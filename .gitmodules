@@ -1,0 +1,3 @@
+[submodule "third_party/LivePortrait"]
+	path = third_party/LivePortrait
+	url = https://github.com/KlingAIResearch/LivePortrait.git
