@@ -124,6 +124,24 @@ def test_motion_sample_selection_honors_speaker_and_limit(tmp_path: Path) -> Non
     assert [sample.sample_id for sample in selected] == ["s1_example"]
 
 
+def test_motion_sample_selection_skips_incomplete_preprocessing(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    ready = _sample(tmp_path)
+    incomplete = replace(
+        ready,
+        sample_id="s1_incomplete",
+        face_crop_path=None,
+        status="discovered",
+    )
+
+    selected = select_motion_samples(
+        [incomplete, ready],
+        settings.data_settings,
+    )
+
+    assert [sample.sample_id for sample in selected] == ["s1_example"]
+
+
 def test_reconstruction_batch_size_does_not_invalidate_motion(tmp_path: Path) -> None:
     settings = _settings(tmp_path)
     sample = _sample(tmp_path)

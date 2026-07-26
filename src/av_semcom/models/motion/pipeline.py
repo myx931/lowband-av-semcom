@@ -101,13 +101,15 @@ def select_motion_samples(
     samples: list[GridSample],
     settings: GridSettings,
 ) -> list[GridSample]:
-    """Apply configured speaker and per-speaker limits to a manifest."""
+    """Select preprocessing-complete samples under speaker and count limits."""
 
     allowed_speakers = set(settings.speakers)
     selected: list[GridSample] = []
     counts: dict[str, int] = {}
     for sample in samples:
         if sample.speaker_id not in allowed_speakers:
+            continue
+        if sample.status != "processed" or sample.face_crop_path is None:
             continue
         count = counts.get(sample.speaker_id, 0)
         if settings.max_samples is not None and count >= settings.max_samples:
