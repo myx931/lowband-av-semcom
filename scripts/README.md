@@ -2,10 +2,12 @@
 
 命令行入口按阶段组织：
 
-- `data/`：数据说明、子集准备与验证；
+- `data/`：GRID 下载说明、子集发现、音频特征、关键点、裁剪与验证；
 - `baselines/`：运动提取、重建和扰动基线；
 - `train/`：训练入口；
 - `eval/`：独立评价入口；
 - `experiments/`：论文实验编排与绘图。
 
-当前 Milestone 0/1 不提供可执行研究脚本。后续入口应只负责参数解析和调用 `av_semcom` 包，不在脚本中实现核心逻辑。
+脚本入口只负责参数解析和调用 `av_semcom` 包，不在脚本中实现核心逻辑。GRID 脚本
+共享 `--config`、`--speakers`、`--max-samples`、`--resume/--no-resume` 和
+`--overwrite` 参数；完整使用顺序见 `data/README.md`。
