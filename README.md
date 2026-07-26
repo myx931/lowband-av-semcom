@@ -8,8 +8,8 @@
 
 当前完成 Milestone 0（仓库初始化）、Milestone 1（研究设计文档）以及 Milestone 2
 的 GRID 小子集数据管线。真实 `s1` pilot 已用 20 条样本完成预处理验收。
-Milestone 3 正在接入冻结的 LivePortrait 运动提取与重建敏感性基线；训练模型、
-残差传输与信道实验尚未实现，不宣称已经跑通。
+Milestone 3 的冻结 LivePortrait 运动提取与重建敏感性基线已完成真实 GPU
+验收；训练模型、残差传输与信道实验尚未实现，不宣称已经跑通。
 
 研究路线：
 
