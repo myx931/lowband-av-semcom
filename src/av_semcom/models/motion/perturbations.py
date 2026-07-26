@@ -56,18 +56,21 @@ def fit_motion_normalizer(
     sequences: list[MotionSequence],
     *,
     minimum_std: float = 1e-6,
+    scope: str = "pilot_stats",
 ) -> MotionNormalizer:
-    """Fit pilot-only per-coordinate normalization statistics."""
+    """Fit per-coordinate normalization statistics for an explicit data scope."""
 
     if not sequences:
         raise ValueError("at least one motion sequence is required")
     if minimum_std <= 0:
         raise ValueError("minimum_std must be positive")
+    if not scope:
+        raise ValueError("scope must be non-empty")
     values = np.concatenate([sequence.lip_vector for sequence in sequences], axis=0)
     mean = values.mean(axis=0, dtype=np.float64).astype(np.float32)
     std = values.std(axis=0, dtype=np.float64).astype(np.float32)
     std = np.maximum(std, np.float32(minimum_std))
-    return MotionNormalizer(mean=mean, std=std)
+    return MotionNormalizer(mean=mean, std=std, scope=scope)
 
 
 def save_motion_normalizer(path: Path, normalizer: MotionNormalizer) -> None:

@@ -13,6 +13,12 @@ LivePortrait 固定版本输出 21×3 的隐式表情变形。本项目采用官
 当前 20 条 `s1` 数据只用于 pilot。`pilot_stats.json` 的均值和标准差不得直接用于
 正式多说话人实验；正式统计必须只从 train speakers 估计。
 
+多说话人运动提取使用
+[`configs/motion/liveportrait_multispeaker.yaml`](../configs/motion/liveportrait_multispeaker.yaml)。
+产物写入 `$DATA_ROOT/grid/processed/multispeaker/motion/liveportrait/`，归一化统计
+写入同目录的 `train_stats.json`，并且只使用 `split=train` 的有效运动序列拟合，
+不得读取 validation 或 test 序列。
+
 ## 源码、权重与环境
 
 ```bash
@@ -96,3 +102,15 @@ artifact 复验均有效，重复提取未改写已有文件。
 oracle，也不外推到正式多说话人实验。完整本地输出位于忽略目录
 `outputs/motion_sensitivity/20260726T060450.218238Z/`，包含 84 个代表性视频、
 84 张对照图和 4 张曲线，不提交 Git。
+
+## 多说话人运动目标
+
+2026-07-26 使用同一 RTX 4080 SUPER、LivePortrait commit 和模型权重，对
+`s1/s2/s3` 的说话人隔离开发子集完成运动提取。数据预处理阶段的 300 个候选中，
+298 条通过固定的 95% 人脸检测覆盖率门槛并生成 `[75, 21, 3]` 完整表情和
+`[75, 6, 3]` 嘴部相对运动；两条预处理失败不会进入运动阶段。
+
+有效样本按 split 分布为 train 99、validation 99、test 100。`train_stats.json`
+仅由 99 条 train 运动序列拟合，元数据中的 scope 为 `train_stats`，没有使用
+validation/test 数据。该数据规模用于 E3 可行性基线，仍不足以支持强跨身份泛化
+结论。

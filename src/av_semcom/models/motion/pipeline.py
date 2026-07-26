@@ -80,6 +80,9 @@ def motion_artifact_fingerprint(
 
     motion_config = dict(settings.config.get("motion", {}))
     motion_config.pop("reconstruction_batch_size", None)
+    motion_config.pop("stats_filename", None)
+    motion_config.pop("stats_scope", None)
+    motion_config.pop("stats_split", None)
     return config_fingerprint(
         {
             "stage": "motion_extraction",
@@ -98,13 +101,15 @@ def select_motion_samples(
     samples: list[GridSample],
     settings: GridSettings,
 ) -> list[GridSample]:
-    """Apply configured speaker and per-speaker limits to a manifest."""
+    """Select preprocessing-complete samples under speaker and count limits."""
 
     allowed_speakers = set(settings.speakers)
     selected: list[GridSample] = []
     counts: dict[str, int] = {}
     for sample in samples:
         if sample.speaker_id not in allowed_speakers:
+            continue
+        if sample.status != "processed" or sample.face_crop_path is None:
             continue
         count = counts.get(sample.speaker_id, 0)
         if settings.max_samples is not None and count >= settings.max_samples:
@@ -152,7 +157,7 @@ def extract_motion_for_manifest(
     }
     updated: list[GridSample] = []
     failures: list[FailureRecord] = []
-    sequences: list[MotionSequence] = []
+    sequence_entries: list[tuple[MotionSequence, str]] = []
     try:
         if (
             active_backend.name != settings.backend
@@ -200,7 +205,7 @@ def extract_motion_for_manifest(
                     sequence = load_motion_sequence(output)
                 if sequence.sample_id != sample.sample_id:
                     raise ValueError("motion artifact sample_id does not match manifest")
-                sequences.append(sequence)
+                sequence_entries.append((sequence, sample.split))
                 updated.append(sample.with_artifact("motion_path", relative_output))
             except (OSError, RuntimeError, ValueError, KeyError) as exc:
                 updated.append(sample)
@@ -221,43 +226,55 @@ def extract_motion_for_manifest(
         settings.data_settings.failure_dir / "motion_extraction.jsonl",
         failures,
     )
-    normalizer = _write_or_load_pilot_stats(
+    normalizer = _write_or_load_motion_stats(
         settings,
-        sequences,
+        sequence_entries,
         overwrite=overwrite,
     )
     return updated, failures, normalizer
 
 
-def _write_or_load_pilot_stats(
+def _write_or_load_motion_stats(
     settings: MotionSettings,
-    sequences: list[MotionSequence],
+    sequence_entries: list[tuple[MotionSequence, str]],
     *,
     overwrite: bool,
 ) -> MotionNormalizer | None:
+    sequences = [
+        sequence
+        for sequence, split in sequence_entries
+        if settings.stats_split is None or split == settings.stats_split
+    ]
     if not sequences:
         return None
-    fingerprint = config_fingerprint(
-        {
-            "stage": "pilot_motion_stats",
-            "backend": settings.backend,
-            "backend_revision": settings.backend_revision,
-            "samples": [
-                {
-                    "sample_id": sequence.sample_id,
-                    "config_fingerprint": sequence.config_fingerprint,
-                }
-                for sequence in sequences
-            ],
-        }
-    )
+    fingerprint_payload: dict[str, Any] = {
+        "stage": "pilot_motion_stats",
+        "backend": settings.backend,
+        "backend_revision": settings.backend_revision,
+        "samples": [
+            {
+                "sample_id": sequence.sample_id,
+                "config_fingerprint": sequence.config_fingerprint,
+            }
+            for sequence in sequences
+        ],
+    }
+    if settings.stats_split is not None or settings.stats_scope != "pilot_stats":
+        fingerprint_payload.update(
+            {
+                "stage": "motion_stats",
+                "stats_scope": settings.stats_scope,
+                "stats_split": settings.stats_split,
+            }
+        )
+    fingerprint = config_fingerprint(fingerprint_payload)
     if should_process(
         settings.stats_path,
         fingerprint,
         resume=settings.data_settings.resume,
         overwrite=overwrite,
     ):
-        normalizer = fit_motion_normalizer(sequences)
+        normalizer = fit_motion_normalizer(sequences, scope=settings.stats_scope)
         save_motion_normalizer(settings.stats_path, normalizer)
         write_artifact_metadata(
             settings.stats_path,
