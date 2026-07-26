@@ -13,6 +13,12 @@ LivePortrait 固定版本输出 21×3 的隐式表情变形。本项目采用官
 当前 20 条 `s1` 数据只用于 pilot。`pilot_stats.json` 的均值和标准差不得直接用于
 正式多说话人实验；正式统计必须只从 train speakers 估计。
 
+多说话人运动提取使用
+[`configs/motion/liveportrait_multispeaker.yaml`](../configs/motion/liveportrait_multispeaker.yaml)。
+产物写入 `$DATA_ROOT/grid/processed/multispeaker/motion/liveportrait/`，归一化统计
+写入同目录的 `train_stats.json`，并且只使用 `split=train` 的有效运动序列拟合，
+不得读取 validation 或 test 序列。
+
 ## 源码、权重与环境
 
 ```bash

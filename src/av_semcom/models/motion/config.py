@@ -19,6 +19,8 @@ class MotionSettings:
     data_settings: GridSettings
     output_root: Path
     stats_path: Path
+    stats_split: str | None
+    stats_scope: str
     backend: str
     backend_revision: str
     repository: Path
@@ -53,6 +55,23 @@ class MotionSettings:
         output_root = (data_settings.data_root / output_path).resolve()
         if data_settings.data_root not in output_root.parents:
             raise ConfigError("motion.output_dir escapes DATA_ROOT")
+
+        stats_filename = motion.get("stats_filename", "pilot_stats.json")
+        if not isinstance(stats_filename, str) or not stats_filename:
+            raise ConfigError("motion.stats_filename must be a non-empty relative path")
+        stats_relative = Path(stats_filename)
+        if stats_relative.is_absolute():
+            raise ConfigError("motion.stats_filename must be relative to motion.output_dir")
+        stats_path = (output_root / stats_relative).resolve()
+        if stats_path != output_root and output_root not in stats_path.parents:
+            raise ConfigError("motion.stats_filename escapes motion.output_dir")
+
+        stats_split = motion.get("stats_split")
+        if stats_split is not None and (not isinstance(stats_split, str) or not stats_split):
+            raise ConfigError("motion.stats_split must be a non-empty string or null")
+        stats_scope = motion.get("stats_scope", "pilot_stats")
+        if not isinstance(stats_scope, str) or not stats_scope:
+            raise ConfigError("motion.stats_scope must be a non-empty string")
 
         project_root = Path(__file__).resolve().parents[4]
         repository_raw = motion.get("repository", "third_party/LivePortrait")
@@ -102,7 +121,9 @@ class MotionSettings:
         return cls(
             data_settings=data_settings,
             output_root=output_root,
-            stats_path=output_root / "pilot_stats.json",
+            stats_path=stats_path,
+            stats_split=stats_split,
+            stats_scope=stats_scope,
             backend=backend,
             backend_revision=revision,
             repository=repository.resolve(),

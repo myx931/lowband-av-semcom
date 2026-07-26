@@ -62,3 +62,9 @@ def test_motion_normalizer_round_trip_and_json(tmp_path: Path) -> None:
     assert loaded.scope == "pilot_stats"
     assert np.allclose(loaded.mean, normalizer.mean)
     assert np.allclose(loaded.std, normalizer.std)
+
+
+def test_motion_normalizer_records_train_only_scope() -> None:
+    normalizer = fit_motion_normalizer([_sequence()], scope="train_stats")
+
+    assert normalizer.scope == "train_stats"
