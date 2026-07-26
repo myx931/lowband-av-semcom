@@ -14,3 +14,8 @@
 
 运动提取与重建实验入口位于 `motion/`。真实 LivePortrait 命令必须在独立 GPU
 环境运行；CPU smoke 使用注入式 fake 后端，不加载第三方权重。
+
+E3 的因果音频到运动训练入口为 `train/train_audio_to_motion.py`。运动层独立验证和
+冻结 LivePortrait 重建评价分别位于 `eval/evaluate_audio_to_motion.py` 和
+`eval/reconstruct_audio_to_motion.py`。训练与重建使用同一个被 Git 忽略的运行
+目录，但分别在 Python 3.11 CUDA 训练环境和 Python 3.10 LivePortrait 环境执行。
