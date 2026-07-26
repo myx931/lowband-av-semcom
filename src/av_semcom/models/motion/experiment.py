@@ -37,6 +37,7 @@ from av_semcom.models.motion.perturbations import (
     apply_perturbation,
     default_perturbation_conditions,
     load_motion_normalizer,
+    perturbation_parameter_name,
 )
 from av_semcom.models.motion.pipeline import (
     create_reconstruction_backend,
@@ -355,6 +356,7 @@ def _summarize_results(
         item: dict[str, Any] = {
             "condition": condition_name,
             "family": condition_rows[0]["family"],
+            "parameter_name": perturbation_parameter_name(str(condition_rows[0]["family"])),
             "value": condition_rows[0]["value"],
             "seed": condition_rows[0]["seed"],
             "sample_count": len(condition_rows),
@@ -374,6 +376,7 @@ def _summarize_results(
             item[f"{metric_name}_std"] = float(finite_values.std()) if finite_values.size else None
         condition_summaries.append(item)
     return {
+        "summary_schema_version": 2,
         "result_count": len(rows),
         "condition_count": len(grouped),
         "failure_count": len(failures),
@@ -504,7 +507,13 @@ def _write_plots(plot_root: Path, summary: Mapping[str, Any]) -> None:
             "matplotlib is required for sensitivity plots; install requirements/base.txt"
         ) from exc
     plot_root.mkdir(parents=True, exist_ok=True)
-    for family in ("gaussian", "quantization", "random_dropout", "magnitude_sparsity"):
+    plot_definitions = {
+        "gaussian": ("Noise standard deviation (sigma)", "Gaussian Noise"),
+        "quantization": ("Quantization bits", "Uniform Quantization"),
+        "random_dropout": ("Keep ratio", "Random Dropout"),
+        "magnitude_sparsity": ("Keep ratio", "Magnitude Sparsity"),
+    }
+    for family, (x_label, title) in plot_definitions.items():
         family_rows = [
             row for row in conditions if row["family"] == family and row["value"] is not None
         ]
@@ -519,9 +528,9 @@ def _write_plots(plot_root: Path, summary: Mapping[str, Any]) -> None:
         y_values = [float(np.mean(grouped[value])) for value in x_values]
         figure, axis = plt.subplots(figsize=(5, 3.5))
         axis.plot(x_values, y_values, marker="o")
-        axis.set_xlabel("perturbation value")
+        axis.set_xlabel(x_label)
         axis.set_ylabel("PSNR (dB)")
-        axis.set_title(family.replace("_", " ").title())
+        axis.set_title(title)
         axis.grid(True, alpha=0.3)
         figure.tight_layout()
         output = plot_root / f"{family}_psnr.png"

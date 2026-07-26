@@ -70,6 +70,9 @@ python scripts/motion/run_motion_sensitivity.py \
 
 报告运动 L1、RMSE、速度误差、全脸 MAE/PSNR/SSIM、嘴部 ROI MAE、嘴部 NME
 和关键点检测覆盖率。pilot 不设置必须改善的质量阈值，结果必须如实保存和报告。
+汇总中的通用字段 `value` 必须结合 `parameter_name` 解读：Gaussian 使用
+`noise_standard_deviation`，量化使用 `quantization_bits`，随机丢弃和幅度稀疏
+使用 `keep_ratio`。曲线横轴显示这些实际参数，不把方向相反的参数统称为扰动强度。
 
 ## 真实 GPU 验收
 

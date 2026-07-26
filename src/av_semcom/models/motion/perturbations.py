@@ -104,6 +104,17 @@ class PerturbationCondition:
         return asdict(self)
 
 
+def perturbation_parameter_name(family: str) -> str | None:
+    """Return the physical meaning of ``value`` for one condition family."""
+
+    return {
+        "gaussian": "noise_standard_deviation",
+        "quantization": "quantization_bits",
+        "random_dropout": "keep_ratio",
+        "magnitude_sparsity": "keep_ratio",
+    }.get(family)
+
+
 def default_perturbation_conditions() -> tuple[PerturbationCondition, ...]:
     """Return the fixed E2 sensitivity grid."""
 

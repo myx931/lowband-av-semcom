@@ -7,6 +7,7 @@ import numpy as np
 from av_semcom.models.motion.perturbations import (
     PerturbationCondition,
     apply_perturbation,
+    perturbation_parameter_name,
 )
 
 
@@ -47,3 +48,11 @@ def test_magnitude_sparsity_retains_largest_coordinates() -> None:
 
     assert np.count_nonzero(result[1]) == 2
     assert result[1, -2:].tolist() == values[1, -2:].tolist()
+
+
+def test_perturbation_parameter_names_are_unambiguous() -> None:
+    assert perturbation_parameter_name("gaussian") == "noise_standard_deviation"
+    assert perturbation_parameter_name("quantization") == "quantization_bits"
+    assert perturbation_parameter_name("random_dropout") == "keep_ratio"
+    assert perturbation_parameter_name("magnitude_sparsity") == "keep_ratio"
+    assert perturbation_parameter_name("identity") is None
