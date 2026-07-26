@@ -134,3 +134,10 @@ def test_speaker_split_is_deterministic_and_isolated() -> None:
 def test_two_speakers_cannot_claim_formal_isolation() -> None:
     with pytest.raises(ValueError, match="at least three"):
         assign_speaker_splits(["s1", "s2"], seed=42)
+
+
+def test_minimal_three_speaker_split_has_fixed_isolated_roles() -> None:
+    assignments = assign_speaker_splits(["s1", "s2", "s3"], seed=42)
+
+    assert assignments == {"s2": "test", "s1": "validation", "s3": "train"}
+    assert len(set(assignments.values())) == 3

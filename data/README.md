@@ -64,6 +64,46 @@ ffmpeg -nostdin -loglevel error \
 视频应产生 75 张 JPG。FFmpeg 仅用于从官方 MPG 拆帧；后续五阶段直接读取
 JPG 和 WAV。
 
+进入正式说话人隔离实验前，最小扩展为 `s1/s2/s3`。已有 `audio_25k.zip`
+同时包含这三个说话人的音频，因此只需额外手动下载两个视频压缩包：
+
+| 文件 | 大小 | MD5 |
+|---|---:|---|
+| `s2.zip` | 约 394.6 MB | `36e513652d9abec68c721221ede557df` |
+| `s3.zip` | 约 394.1 MB | `b854132feecda313f0a0c6145131d693` |
+
+```bash
+python scripts/data/download_grid_instructions.py --speakers s2 s3
+```
+
+这三个说话人只满足管线的最小身份隔离条件；正式模型结果仍应明确说明说话人数
+较少，并在算力允许时再扩大说话人覆盖。
+
+多说话人开发子集使用独立配置
+[`configs/data/grid_multispeaker.yaml`](../configs/data/grid_multispeaker.yaml)，不会覆盖
+已经验收的 `s1 pilot` manifest 和处理产物。默认每位说话人取文件名排序后的前
+100 个有效配对；固定种子 42 下，`s3` 为 train、`s1` 为 validation、`s2` 为
+test。该划分仅用于验证 E3 音频到运动基线的实现和身份隔离，不能据此宣称跨说话人
+泛化已经充分验证。
+
+三个说话人的 JPG 序列整理完成后，运行：
+
+```bash
+python scripts/data/prepare_grid_subset.py \
+  --config configs/data/grid_multispeaker.yaml
+python scripts/data/extract_audio_features.py \
+  --config configs/data/grid_multispeaker.yaml
+python scripts/data/extract_landmarks.py \
+  --config configs/data/grid_multispeaker.yaml
+python scripts/data/extract_face_crops.py \
+  --config configs/data/grid_multispeaker.yaml
+python scripts/data/validate_dataset.py \
+  --config configs/data/grid_multispeaker.yaml --require-processed
+```
+
+多说话人产物写入 `$DATA_ROOT/grid/processed/multispeaker/`，失败记录写入
+`$DATA_ROOT/grid/manifests/failures_multispeaker/`。
+
 ## 小子集处理
 
 ```bash
