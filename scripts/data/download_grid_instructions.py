@@ -31,15 +31,16 @@ def main() -> int:
         print(f"{speaker} video archive (contains {speaker}/*.mpg): {url}")
         print(f"  size: approximately {size}")
         print(f"  md5: {checksum}")
-    print(f"25 kHz audio archive: {AUDIO_URL}")
+    print(f"Optional endpointed 25 kHz audio archive: {AUDIO_URL}")
     print("  size: approximately 2.6 GB")
     print("  md5: 4b3ac37b1a258f55d1eebe657de491a9")
+    print("  do not use these variable-duration WAV files as full-video aligned audio")
     print("Expected extracted layout:")
     for speaker in speakers:
         print(f"  $DATA_ROOT/grid/raw/video_mpg/{speaker}/<utterance_id>.mpg")
         print(f"  $DATA_ROOT/grid/raw/video/{speaker}/<utterance_id>/*.jpg")
-        print(f"  $DATA_ROOT/grid/raw/audio/{speaker}/<utterance_id>.wav")
-    print("Use FFmpeg to extract the official 25 fps MPG files into JPG directories.")
+        print(f"  $DATA_ROOT/grid/raw/audio_synced/{speaker}/<utterance_id>.wav")
+    print("Use FFmpeg to extract both JPG frames and the synchronized MPG audio track.")
     print("Cite DOI: 10.5281/zenodo.3625687")
     return 0
 

@@ -17,7 +17,12 @@ export DATA_ROOT=/path/to/datasets
 | 文件 | 大小 | MD5 |
 |---|---:|---|
 | `s1.zip` | 约 423.5 MB | `cbd6556668f061b5c3681bc722659b39` |
-| `audio_25k.zip` | 约 2.6 GB | `4b3ac37b1a258f55d1eebe657de491a9` |
+
+`audio_25k.zip`（约 2.6 GB，MD5
+`4b3ac37b1a258f55d1eebe657de491a9`）是可选的独立语音资料，不再作为本项目的
+全视频同步音频源。本地审计发现其中 298 条 `s1/s2/s3` WAV 时长为
+1.12–2.50 秒，而对应视频固定为 3 秒；将这些 WAV 直接插值到 75 帧会错误地改变
+语速和时间轴。
 
 只查看下载说明（不会产生网络写入）：
 
@@ -25,9 +30,9 @@ export DATA_ROOT=/path/to/datasets
 python scripts/data/download_grid_instructions.py --speakers s1
 ```
 
-Zenodo 的 `s1.zip` 实际包含 `s1/*.mpg`，并不是已经拆好的 JPG。先保留原始
-MPG，再用 FFmpeg 以原始 25 fps 拆帧；`audio_25k.zip` 中的音频位于
-`audio_25k/s1/*.wav`。整理后的输入为：
+Zenodo 的 `s1.zip` 实际包含 `s1/*.mpg`，并不是已经拆好的 JPG。MPG 同时包含
+25 fps 视频和从 0 秒开始的音轨。先保留原始 MPG，再用 FFmpeg 拆出 JPG 和同步
+PCM WAV。整理后的输入为：
 
 ```text
 $DATA_ROOT/
@@ -40,7 +45,7 @@ $DATA_ROOT/
     │   │   └── s1/
     │   │       └── <utterance_id>/
     │   │           └── *.jpg
-    │   └── audio/
+    │   └── audio_synced/
     │       └── s1/
     │           └── <utterance_id>.wav
     ├── processed/
@@ -60,12 +65,20 @@ ffmpeg -nostdin -loglevel error \
   -q:v 2 "$DATA_ROOT/grid/raw/video/s1/bbaf2n/%06d.jpg"
 ```
 
-首轮 pilot 只需对按文件名排序后的最多 20 个视频执行同样操作。每个 GRID
-视频应产生 75 张 JPG。FFmpeg 仅用于从官方 MPG 拆帧；后续五阶段直接读取
-JPG 和 WAV。
+每个 GRID 视频应产生 75 张 JPG。同步 WAV 应从同一个 MPG 的音轨提取，禁止把
+变长的 `audio_25k` WAV 拉伸到三秒。仓库命令会原子提取 WAV、记录来源 MPG 和
+时长，并将音频与既有视觉产物组合到独立 manifest：
 
-进入正式说话人隔离实验前，最小扩展为 `s1/s2/s3`。已有 `audio_25k.zip`
-同时包含这三个说话人的音频，因此只需额外手动下载两个视频压缩包：
+```bash
+python scripts/data/extract_grid_synced_audio.py \
+  --config configs/data/grid_multispeaker_synced.yaml
+```
+
+随后 log-Mel 使用 10 ms 绝对时间步：音频尾部不足三秒时只补零，超过三秒时只
+截尾，不进行时间插值。音频/视频时长比不在 `0.95..1.05` 时直接记为失败。
+
+进入正式说话人隔离实验前，最小扩展为 `s1/s2/s3`，需要额外手动下载两个包含
+同步音轨的视频压缩包：
 
 | 文件 | 大小 | MD5 |
 |---|---:|---|
@@ -79,30 +92,28 @@ python scripts/data/download_grid_instructions.py --speakers s2 s3
 这三个说话人只满足管线的最小身份隔离条件；正式模型结果仍应明确说明说话人数
 较少，并在算力允许时再扩大说话人覆盖。
 
-多说话人开发子集使用独立配置
-[`configs/data/grid_multispeaker.yaml`](../configs/data/grid_multispeaker.yaml)，不会覆盖
-已经验收的 `s1 pilot` manifest 和处理产物。默认每位说话人取文件名排序后的前
-100 个有效配对；固定种子 42 下，`s3` 为 train、`s1` 为 validation、`s2` 为
-test。该划分仅用于验证 E3 音频到运动基线的实现和身份隔离，不能据此宣称跨说话人
-泛化已经充分验证。
+修正后的多说话人开发子集使用独立配置
+[`configs/data/grid_multispeaker_synced.yaml`](../configs/data/grid_multispeaker_synced.yaml)，
+不会覆盖旧 manifest、旧特征或 `s1 pilot` 产物。默认每位说话人取文件名排序后的
+前 100 个有效样本；固定种子 42 下，`s3` 为 train、`s1` 为 validation、`s2`
+为 test。该划分仅用于验证 E3 音频到运动基线的实现和身份隔离，不能据此宣称跨
+说话人泛化已经充分验证。
 
-三个说话人的 JPG 序列整理完成后，运行：
+三个说话人的 JPG 序列和 MPG 整理完成后，修复已有三说话人 manifest 时运行：
 
 ```bash
-python scripts/data/prepare_grid_subset.py \
-  --config configs/data/grid_multispeaker.yaml
+python scripts/data/extract_grid_synced_audio.py \
+  --config configs/data/grid_multispeaker_synced.yaml
 python scripts/data/extract_audio_features.py \
-  --config configs/data/grid_multispeaker.yaml
-python scripts/data/extract_landmarks.py \
-  --config configs/data/grid_multispeaker.yaml
-python scripts/data/extract_face_crops.py \
-  --config configs/data/grid_multispeaker.yaml
+  --config configs/data/grid_multispeaker_synced.yaml
 python scripts/data/validate_dataset.py \
-  --config configs/data/grid_multispeaker.yaml --require-processed
+  --config configs/data/grid_multispeaker_synced.yaml --require-processed
 ```
 
-多说话人产物写入 `$DATA_ROOT/grid/processed/multispeaker/`，失败记录写入
-`$DATA_ROOT/grid/manifests/failures_multispeaker/`。
+同步音频和特征分别写入 `$DATA_ROOT/grid/raw/audio_synced/` 与
+`$DATA_ROOT/grid/processed/multispeaker_synced/`。关键点、裁剪和运动来自同一
+视频时间轴，因此新 manifest 安全复用既有视觉产物；失败记录写入
+`$DATA_ROOT/grid/manifests/failures_multispeaker_synced/`。
 
 ## 小子集处理
 

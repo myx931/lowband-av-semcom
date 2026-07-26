@@ -2,10 +2,10 @@ data:
   dataset: grid
   root: null
   raw_video_dir: grid/raw/video
-  raw_audio_dir: grid/raw/audio
-  manifest_path: grid/manifests/grid_multispeaker.jsonl
-  failure_dir: grid/manifests/failures_multispeaker
-  processed_dir: grid/processed/multispeaker
+  raw_audio_dir: grid/raw/audio_synced
+  manifest_path: grid/manifests/grid_multispeaker_synced.jsonl
+  failure_dir: grid/manifests/failures_multispeaker_synced
+  processed_dir: grid/processed/multispeaker_synced
   speakers: [s1, s2, s3]
   max_samples: 100
   split_seed: 42
