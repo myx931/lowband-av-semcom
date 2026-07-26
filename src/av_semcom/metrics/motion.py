@@ -6,6 +6,7 @@ from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 
 import numpy as np
+from numpy.typing import NDArray
 
 from av_semcom.data.landmarks import FaceDetection, FaceLandmarkBackend
 
@@ -37,7 +38,10 @@ class ReconstructionMetrics:
         return asdict(self)
 
 
-def compute_motion_metrics(target: np.ndarray, candidate: np.ndarray) -> MotionMetrics:
+def compute_motion_metrics(
+    target: NDArray[np.float32],
+    candidate: NDArray[np.float32],
+) -> MotionMetrics:
     """Compute errors between two ``[T, 18]`` mouth-motion sequences."""
 
     if target.shape != candidate.shape or target.ndim != 2 or target.shape[1] != 18:
@@ -53,11 +57,12 @@ def compute_motion_metrics(target: np.ndarray, candidate: np.ndarray) -> MotionM
 
 
 def compute_reconstruction_metrics(
-    target_frames: np.ndarray,
-    reconstructed_frames: np.ndarray,
+    target_frames: NDArray[np.uint8],
+    reconstructed_frames: NDArray[np.uint8],
     *,
     landmark_backend: FaceLandmarkBackend | None = None,
     target_detections: Sequence[FaceDetection | None] | None = None,
+    reconstructed_detections: Sequence[FaceDetection | None] | None = None,
 ) -> ReconstructionMetrics:
     """Measure aligned face quality and optional detected-mouth geometry."""
 
@@ -72,6 +77,11 @@ def compute_reconstruction_metrics(
 
     if target_detections is not None and len(target_detections) != target_frames.shape[0]:
         raise ValueError("target_detections must contain one entry per frame")
+    if (
+        reconstructed_detections is not None
+        and len(reconstructed_detections) != target_frames.shape[0]
+    ):
+        raise ValueError("reconstructed_detections must contain one entry per frame")
 
     target_float = target_frames.astype(np.float32)
     reconstructed_float = reconstructed_frames.astype(np.float32)
@@ -90,7 +100,12 @@ def compute_reconstruction_metrics(
             "scikit-image is required for SSIM; install requirements/base.txt"
         ) from exc
     ssim_values = [
-        structural_similarity(target, reconstructed, channel_axis=2, data_range=255)
+        structural_similarity(  # type: ignore[no-untyped-call]
+            target,
+            reconstructed,
+            channel_axis=2,
+            data_range=255,
+        )
         for target, reconstructed in zip(target_frames, reconstructed_frames, strict=True)
     ]
 
@@ -106,7 +121,11 @@ def compute_reconstruction_metrics(
                 if target_detections is not None
                 else landmark_backend.detect(target)
             )
-            reconstructed_detection = landmark_backend.detect(reconstructed)
+            reconstructed_detection = (
+                reconstructed_detections[frame_index]
+                if reconstructed_detections is not None
+                else landmark_backend.detect(reconstructed)
+            )
             if target_detection is None or reconstructed_detection is None:
                 continue
             target_xy = target_detection.mouth_landmarks[:, :2]

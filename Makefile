@@ -1,4 +1,4 @@
-.PHONY: setup lint format test smoke motion-smoke clean
+.PHONY: setup lint format test smoke motion-smoke audio-smoke clean
 
 PYTHON ?= python
 
@@ -24,6 +24,9 @@ smoke:
 
 motion-smoke:
 	$(PYTHON) -m pytest tests/smoke/test_motion_sensitivity_pipeline.py
+
+audio-smoke:
+	$(PYTHON) -m pytest tests/smoke/test_audio_motion_pipeline.py
 
 clean:
 	rm -rf .pytest_cache .mypy_cache .ruff_cache build dist htmlcov
