@@ -80,3 +80,22 @@ def test_frame_extraction_is_atomic_bounded_and_resumable(tmp_path: Path) -> Non
     assert [path.stat().st_mtime_ns for path in sorted(output.glob("*.jpg"))] == (
         modification_times
     )
+
+
+def test_frame_extraction_excludes_samples_before_applying_limit(tmp_path: Path) -> None:
+    mpg_root = tmp_path / "grid/raw/video_mpg/s1"
+    mpg_root.mkdir(parents=True)
+    (mpg_root / "a.mpg").write_bytes(b"excluded")
+    (mpg_root / "b.mpg").write_bytes(b"selected")
+    extractor = _FakeFrameExtractor()
+    settings = _settings(tmp_path)
+    settings.config["excluded_sample_ids"] = ["s1_a"]
+
+    sample_count, processed, failures = extract_grid_frame_sequences(
+        settings,
+        extractor=extractor,
+    )
+
+    assert (sample_count, processed, failures) == (1, 1, [])
+    assert not (tmp_path / "grid/raw/video/s1/a").exists()
+    assert (tmp_path / "grid/raw/video/s1/b").is_dir()

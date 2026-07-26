@@ -163,6 +163,12 @@ def _discover_samples_from_frames(
     mpg_root: Path,
     target_sample_rate: int,
 ) -> list[GridSample]:
+    raw_excluded = settings.config.get("excluded_sample_ids", [])
+    if not isinstance(raw_excluded, list) or not all(
+        isinstance(sample_id, str) and sample_id for sample_id in raw_excluded
+    ):
+        raise ConfigError("data.excluded_sample_ids must be a list of non-empty strings")
+    excluded_sample_ids = set(raw_excluded)
     samples: list[GridSample] = []
     for speaker_id in settings.speakers:
         frame_root = settings.raw_video_root / speaker_id
@@ -178,6 +184,8 @@ def _discover_samples_from_frames(
             if settings.max_samples is not None and selected >= settings.max_samples:
                 break
             utterance_id = frame_directory.name
+            if f"{speaker_id}_{utterance_id}" in excluded_sample_ids:
+                continue
             if not (mpg_root / speaker_id / f"{utterance_id}.mpg").is_file():
                 continue
             audio_output = settings.raw_audio_root / speaker_id / f"{utterance_id}.wav"

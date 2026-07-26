@@ -113,12 +113,19 @@ def extract_grid_frame_sequences(
     expected_frame_count = int(frame_config.get("expected_frame_count", 75))
     if workers <= 0 or quality <= 0 or expected_frame_count <= 0:
         raise ConfigError("frame extraction workers, quality, and frame count must be positive")
+    raw_excluded = settings.config.get("excluded_sample_ids", [])
+    if not isinstance(raw_excluded, list) or not all(
+        isinstance(sample_id, str) and sample_id for sample_id in raw_excluded
+    ):
+        raise ConfigError("data.excluded_sample_ids must be a list of non-empty strings")
+    excluded_sample_ids = set(raw_excluded)
     active_extractor = extractor or FfmpegGridFrameExtractor(executable)
 
     candidates: list[tuple[str, Path]] = []
     for speaker_id in settings.speakers:
         speaker_root = mpg_root / speaker_id
         paths = sorted(speaker_root.glob("*.mpg")) if speaker_root.is_dir() else []
+        paths = [path for path in paths if f"{speaker_id}_{path.stem}" not in excluded_sample_ids]
         if settings.max_samples is not None:
             paths = paths[: settings.max_samples]
         candidates.extend((speaker_id, path) for path in paths)

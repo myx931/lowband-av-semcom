@@ -10,6 +10,20 @@ processed_dir: grid/processed/ten_speaker
 # Feasibility-scale identity split: eight train, one validation, one test speaker.
 speakers: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10]
 max_samples: 100
+# Official clips that violate the fixed 75-frame contract. Each is retained in
+# the verified archive but skipped in favor of the next filename-sorted clip.
+excluded_sample_ids:
+  - s4_bbaf2a
+  - s8_bbar6a
+  - s8_bbay9p
+  - s8_bbie3p
+  - s8_bbik5n
+  - s8_bbir1p
+  - s8_bbirzs
+  - s8_bgag6a
+  - s8_bganza
+  - s8_bgim5p
+  - s8_bgwa8s
 split_seed: 42
 validation_ratio: 0.1
 test_ratio: 0.1

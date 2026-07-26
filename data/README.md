@@ -154,6 +154,10 @@ python scripts/data/extract_grid_frames.py \
   --speakers s4 s5 s6 s7 s8 s9 s10
 ```
 
+真实拆帧审计发现 `s4_bbaf2a` 只有 74 帧，另有 10 条 `s8` 样本只包含 2–11 帧。
+十说话人配置逐项记录这些 ID，并从文件名排序后的后续样本回补。管线不复制末帧、
+不伪造固定长度；原始文件仍保留在已校验压缩包中。
+
 接着对全部十个说话人建立同步 manifest、从 MPG 提取 16 kHz PCM 音频，并生成
 精确时间对齐的 `[75, 4, 80]` log-Mel：
 
