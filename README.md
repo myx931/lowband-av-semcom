@@ -12,7 +12,9 @@ Milestone 3 的冻结 LivePortrait 运动提取与重建敏感性基线及三说
 已经完成真实 GPU 验收。Milestone 4 的三说话人因果音频到运动 GRU 已完成三种子
 训练、独立运动评价和全量冻结 LivePortrait 重建评价，但随后审计发现
 `audio_25k` 变长 WAV 曾被错误拉伸到三秒，该次模型数值已降级为无效诊断记录。
-同步 MPG 音轨和严格时间戳 log-Mel 修复已完成 CPU 数据验收，E3 正在重新运行。
+同步 MPG 音轨和严格时间戳 log-Mel 修复已完成 CPU 数据验收，并已重新完成 E3
+三种子训练与 199 条样本的冻结重建评价。修正后的 GRU 在 validation/test 上均
+超过 train mean，但 test 仍未超过 zero motion，因此只支持有限可行性结论。
 残差传输与信道实验尚未开始。
 
 研究路线：
