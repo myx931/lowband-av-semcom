@@ -115,6 +115,65 @@ python scripts/data/validate_dataset.py \
 视频时间轴，因此新 manifest 安全复用既有视觉产物；失败记录写入
 `$DATA_ROOT/grid/manifests/failures_multispeaker_synced/`。
 
+## 十说话人扩展
+
+E3 的下一轮可行性实验使用 `s1`–`s10`，每位说话人取文件名排序后的前 100 条。
+新增压缩包仍须从同一 Zenodo 记录手动获取：
+
+| 文件 | 大小 | MD5 |
+|---|---:|---|
+| `s4.zip` | 约 491.9 MB | `1bb4543ca0a27fe76e2874845468a016` |
+| `s5.zip` | 约 407.2 MB | `895d17182889324dd2453aff0ae49083` |
+| `s6.zip` | 约 423.3 MB | `e82a4330653ed81d00c0d2738431e6e7` |
+| `s7.zip` | 约 384.1 MB | `ff31aaddf10bbe345aa1a8434b205fd5` |
+| `s8.zip` | 约 412.9 MB | `af52367c91e96c20cabb0820046dbd73` |
+| `s9.zip` | 约 390.2 MB | `602221e579190b7cb393b4b86a4228bc` |
+| `s10.zip` | 约 429.5 MB | `628b4df6915b379e2c050512f661fa04` |
+
+```bash
+python scripts/data/download_grid_instructions.py \
+  --speakers s4 s5 s6 s7 s8 s9 s10
+```
+
+固定种子 42 和 `validation_ratio=test_ratio=0.1` 产生以下身份隔离划分：
+
+- train：`s1/s2/s4/s5/s6/s8/s9/s10`，预计 800 条；
+- validation：`s3`，预计 100 条；
+- test：`s7`，预计 100 条。
+
+这比三个说话人的开发实验更能检验训练身份覆盖的作用，但 validation 和 test
+仍各只有一个身份，因此仍属于论文正式实验之前的扩展可行性实验。
+
+压缩包 MD5 校验通过后，仅需把选中的 MPG 放到
+`$DATA_ROOT/grid/raw/video_mpg/<speaker>/`。仓库命令会从 MPG 原子生成 75 帧 JPG；
+已有 `s1`–`s3` 不需要重复拆帧：
+
+```bash
+python scripts/data/extract_grid_frames.py \
+  --config configs/data/grid_ten_speaker.yaml \
+  --speakers s4 s5 s6 s7 s8 s9 s10
+```
+
+接着对全部十个说话人建立同步 manifest、从 MPG 提取 16 kHz PCM 音频，并生成
+精确时间对齐的 `[75, 4, 80]` log-Mel：
+
+```bash
+python scripts/data/extract_grid_synced_audio.py \
+  --config configs/data/grid_ten_speaker.yaml
+python scripts/data/extract_audio_features.py \
+  --config configs/data/grid_ten_speaker.yaml
+python scripts/data/extract_landmarks.py \
+  --config configs/data/grid_ten_speaker.yaml
+python scripts/data/extract_face_crops.py \
+  --config configs/data/grid_ten_speaker.yaml
+python scripts/data/validate_dataset.py \
+  --config configs/data/grid_ten_speaker.yaml --require-processed
+```
+
+十说话人 manifest、失败记录和处理产物分别写入独立的
+`grid/manifests/grid_ten_speaker.jsonl`、`grid/manifests/failures_ten_speaker/`
+和 `grid/processed/ten_speaker/`，不会改写三说话人实验产物。
+
 ## 小子集处理
 
 ```bash

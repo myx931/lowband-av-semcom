@@ -29,6 +29,7 @@ from av_semcom.data.preprocessing import (
     write_artifact_metadata,
     write_failures,
 )
+from av_semcom.data.splits import assign_speaker_splits
 from av_semcom.utils.config import ConfigError
 
 
@@ -130,6 +131,15 @@ def _config_path(settings: GridSettings, key: str) -> Path:
     return resolve_record_path(value, settings.data_root)
 
 
+def _optional_config_path(settings: GridSettings, key: str) -> Path | None:
+    value = settings.config.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value:
+        raise ConfigError(f"data.{key} must be a non-empty relative path when set")
+    return resolve_record_path(value, settings.data_root)
+
+
 def _selected_source_samples(
     samples: Sequence[GridSample],
     settings: GridSettings,
@@ -143,11 +153,62 @@ def _selected_source_samples(
         count = counts.get(sample.speaker_id, 0)
         if settings.max_samples is not None and count >= settings.max_samples:
             continue
-        if sample.landmark_path is None or sample.face_crop_path is None:
-            continue
         selected.append(sample)
         counts[sample.speaker_id] = count + 1
     return selected
+
+
+def _discover_samples_from_frames(
+    settings: GridSettings,
+    mpg_root: Path,
+    target_sample_rate: int,
+) -> list[GridSample]:
+    samples: list[GridSample] = []
+    for speaker_id in settings.speakers:
+        frame_root = settings.raw_video_root / speaker_id
+        if not frame_root.is_dir():
+            continue
+        selected = 0
+        for frame_directory in sorted(frame_root.iterdir()):
+            if not frame_directory.is_dir():
+                continue
+            frame_paths = sorted(frame_directory.glob("*.jpg"))
+            if not frame_paths:
+                continue
+            if settings.max_samples is not None and selected >= settings.max_samples:
+                break
+            utterance_id = frame_directory.name
+            if not (mpg_root / speaker_id / f"{utterance_id}.mpg").is_file():
+                continue
+            audio_output = settings.raw_audio_root / speaker_id / f"{utterance_id}.wav"
+            samples.append(
+                GridSample(
+                    sample_id=f"{speaker_id}_{utterance_id}",
+                    speaker_id=speaker_id,
+                    video_path=relative_to_data_root(
+                        frame_directory,
+                        settings.data_root,
+                    ),
+                    audio_path=relative_to_data_root(
+                        audio_output,
+                        settings.data_root,
+                    ),
+                    fps=settings.fps,
+                    sample_rate=target_sample_rate,
+                    frame_count=len(frame_paths),
+                    split="unassigned",
+                )
+            )
+            selected += 1
+    if not samples:
+        return []
+    split_by_speaker = assign_speaker_splits(
+        (sample.speaker_id for sample in samples),
+        seed=settings.split_seed,
+        validation_ratio=settings.validation_ratio,
+        test_ratio=settings.test_ratio,
+    )
+    return [replace(sample, split=split_by_speaker[sample.speaker_id]) for sample in samples]
 
 
 def prepare_synchronized_audio_manifest(
@@ -158,7 +219,7 @@ def prepare_synchronized_audio_manifest(
 ) -> tuple[list[GridSample], list[FailureRecord], int]:
     """Extract embedded MPG audio and clone visual artifacts into a new manifest."""
 
-    source_manifest = _config_path(settings, "source_manifest_path")
+    source_manifest = _optional_config_path(settings, "source_manifest_path")
     mpg_root = _config_path(settings, "raw_video_mpg_dir")
     sync_config = settings.config.get("audio_sync", {})
     if not isinstance(sync_config, dict):
@@ -168,10 +229,31 @@ def prepare_synchronized_audio_manifest(
     if target_sample_rate <= 0 or workers <= 0:
         raise ConfigError("audio sample rate and audio_sync.workers must be positive")
     executable = str(sync_config.get("ffmpeg_executable", "ffmpeg"))
+    if source_manifest is None:
+        source_samples = _discover_samples_from_frames(
+            settings,
+            mpg_root,
+            target_sample_rate,
+        )
+        source_identity: object = [
+            {
+                "sample_id": sample.sample_id,
+                "video_path": sample.video_path,
+                "frame_count": sample.frame_count,
+                "split": sample.split,
+            }
+            for sample in source_samples
+        ]
+    else:
+        source_samples = _selected_source_samples(read_manifest(source_manifest), settings)
+        source_identity = {
+            "path": relative_to_data_root(source_manifest, settings.data_root),
+            "sha256": _file_sha256(source_manifest),
+        }
     fingerprint = config_fingerprint(
         {
             "stage": "synchronized_audio_manifest",
-            "source_manifest_sha256": _file_sha256(source_manifest),
+            "source": source_identity,
             "speakers": settings.speakers,
             "max_samples": settings.max_samples,
             "sample_rate": target_sample_rate,
@@ -188,9 +270,8 @@ def prepare_synchronized_audio_manifest(
     ):
         return read_manifest(settings.manifest_path), [], 0
 
-    source_samples = _selected_source_samples(read_manifest(source_manifest), settings)
     if not source_samples:
-        raise ValueError("source manifest contains no selected samples with visual artifacts")
+        raise ValueError("no selected GRID frame/MPG pairs were found")
     active_extractor = extractor or FfmpegSynchronizedAudioExtractor(executable)
 
     def process(sample: GridSample) -> tuple[GridSample | None, FailureRecord | None, bool]:
@@ -277,7 +358,11 @@ def prepare_synchronized_audio_manifest(
         extra={
             "sample_count": len(samples),
             "failure_count": len(failures),
-            "source_manifest": relative_to_data_root(source_manifest, settings.data_root),
+            "source_manifest": (
+                relative_to_data_root(source_manifest, settings.data_root)
+                if source_manifest is not None
+                else None
+            ),
         },
     )
     write_failures(settings.failure_dir / "synchronized_audio.jsonl", failures)

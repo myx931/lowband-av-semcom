@@ -17,7 +17,7 @@ class _FakeExtractor:
         self.calls = 0
 
     def extract(self, source: Path, output: Path, *, sample_rate: int) -> None:
-        assert source.name == "bbaf2n.mpg"
+        assert source.suffix == ".mpg"
         self.calls += 1
         output.parent.mkdir(parents=True, exist_ok=True)
         with wave.open(str(output), "wb") as handle:
@@ -118,3 +118,38 @@ def test_synced_audio_manifest_preserves_visual_artifacts_and_resumes(
     assert resumed == read_manifest(settings.manifest_path)
     assert resumed[0].audio_feature_path == feature_samples[0].audio_feature_path
     assert extractor.calls == 1
+
+
+def test_synced_audio_can_discover_new_speakers_without_source_manifest(
+    tmp_path: Path,
+) -> None:
+    config = dict(_settings(tmp_path).config)
+    config.pop("source_manifest_path")
+    config.update(
+        {
+            "speakers": ["s1", "s2", "s3"],
+            "max_samples": 1,
+            "manifest_path": "grid/manifests/discovered_synced.jsonl",
+        }
+    )
+    for speaker_id in config["speakers"]:
+        frame_directory = tmp_path / f"grid/raw/video/{speaker_id}/example"
+        frame_directory.mkdir(parents=True)
+        (frame_directory / "000001.jpg").write_bytes(b"frame")
+        mpg = tmp_path / f"grid/raw/video_mpg/{speaker_id}/example.mpg"
+        mpg.parent.mkdir(parents=True)
+        mpg.write_bytes(b"fake")
+    extractor = _FakeExtractor()
+
+    samples, failures, processed = prepare_synchronized_audio_manifest(
+        GridSettings.from_config(config),
+        extractor=extractor,
+    )
+
+    assert failures == []
+    assert processed == 3
+    assert extractor.calls == 3
+    assert {sample.speaker_id for sample in samples} == {"s1", "s2", "s3"}
+    assert {sample.split for sample in samples} == {"train", "validation", "test"}
+    assert all(sample.audio_feature_path is None for sample in samples)
+    assert all(sample.status == "discovered" for sample in samples)

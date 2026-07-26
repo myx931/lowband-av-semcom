@@ -144,6 +144,25 @@ def test_minimal_three_speaker_split_has_fixed_isolated_roles() -> None:
     assert len(set(assignments.values())) == 3
 
 
+def test_ten_speaker_split_has_eight_train_identities() -> None:
+    speakers = [f"s{index}" for index in range(1, 11)]
+
+    assignments = assign_speaker_splits(speakers, seed=42)
+
+    assert [speaker for speaker in speakers if assignments[speaker] == "train"] == [
+        "s1",
+        "s2",
+        "s4",
+        "s5",
+        "s6",
+        "s8",
+        "s9",
+        "s10",
+    ]
+    assert [speaker for speaker in speakers if assignments[speaker] == "validation"] == ["s3"]
+    assert [speaker for speaker in speakers if assignments[speaker] == "test"] == ["s7"]
+
+
 def test_validation_rejects_audio_that_would_require_time_stretching(
     tmp_path: Path,
 ) -> None:
