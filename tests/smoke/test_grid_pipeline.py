@@ -38,7 +38,8 @@ def _write_synthetic_sample(root: Path) -> None:
         )
 
     sample_rate = 25000
-    time = np.arange(sample_rate, dtype=np.float32) / sample_rate
+    sample_count = sample_rate // 5  # Five 25 fps frames span 0.2 seconds.
+    time = np.arange(sample_count, dtype=np.float32) / sample_rate
     waveform = (0.1 * np.sin(2 * math.pi * 220 * time) * 32767).astype(np.int16)
     audio_path = root / "grid/raw/audio/s1/example.wav"
     audio_path.parent.mkdir(parents=True)

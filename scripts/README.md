@@ -12,6 +12,9 @@
 共享 `--config`、`--speakers`、`--max-samples`、`--resume/--no-resume` 和
 `--overwrite` 参数；完整使用顺序见 `data/README.md`。
 
+`data/extract_grid_synced_audio.py` 从官方 MPG 原子提取同步 PCM 音轨，并生成独立
+manifest。`audio_25k` 的变长 WAV 不得再作为 75 帧视频的直接对齐输入。
+
 运动提取与重建实验入口位于 `motion/`。真实 LivePortrait 命令必须在独立 GPU
 环境运行；CPU smoke 使用注入式 fake 后端，不加载第三方权重。
 

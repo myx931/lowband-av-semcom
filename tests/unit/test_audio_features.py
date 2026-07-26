@@ -7,6 +7,7 @@ import wave
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from av_semcom.data.audio_features import extract_aligned_log_mel
 
@@ -22,9 +23,10 @@ def test_log_mel_has_configured_video_aligned_shape(tmp_path: Path) -> None:
         handle.setframerate(sample_rate)
         handle.writeframes(waveform.tobytes())
 
-    features, source_rate = extract_aligned_log_mel(
+    features, timing = extract_aligned_log_mel(
         audio_path,
         frame_count=25,
+        fps=25,
         target_sample_rate=16000,
         config={
             "n_mels": 80,
@@ -38,4 +40,36 @@ def test_log_mel_has_configured_video_aligned_shape(tmp_path: Path) -> None:
     assert features.shape == (25, 4, 80)
     assert features.dtype == np.float32
     assert np.isfinite(features).all()
-    assert source_rate == 25000
+    assert timing.source_sample_rate == 25000
+    assert timing.source_duration_seconds == pytest.approx(1.0)
+    assert timing.expected_duration_seconds == pytest.approx(1.0)
+    assert timing.duration_ratio == pytest.approx(1.0)
+    assert timing.alignment_mode == "timestamp"
+
+
+def test_log_mel_rejects_trimmed_audio_instead_of_stretching(tmp_path: Path) -> None:
+    sample_rate = 16000
+    audio_path = tmp_path / "trimmed.wav"
+    with wave.open(str(audio_path), "wb") as handle:
+        handle.setnchannels(1)
+        handle.setsampwidth(2)
+        handle.setframerate(sample_rate)
+        handle.writeframes(np.zeros(sample_rate // 2, dtype=np.int16).tobytes())
+
+    with pytest.raises(ValueError, match="incompatible with video duration"):
+        extract_aligned_log_mel(
+            audio_path,
+            frame_count=25,
+            fps=25,
+            target_sample_rate=sample_rate,
+            config={
+                "n_mels": 80,
+                "window_size": 400,
+                "hop_size": 160,
+                "n_fft": 512,
+                "mel_steps_per_video_frame": 4,
+                "alignment_mode": "timestamp",
+                "minimum_duration_ratio": 0.95,
+                "maximum_duration_ratio": 1.05,
+            },
+        )

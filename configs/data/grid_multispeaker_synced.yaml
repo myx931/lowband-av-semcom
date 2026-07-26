@@ -1,13 +1,14 @@
 dataset: grid
 root: null  # Resolved from DATA_ROOT when unset.
 raw_video_dir: grid/raw/video
-raw_audio_dir: grid/raw/audio
-manifest_path: grid/manifests/grid_multispeaker.jsonl
-failure_dir: grid/manifests/failures_multispeaker
-processed_dir: grid/processed/multispeaker
+raw_video_mpg_dir: grid/raw/video_mpg
+raw_audio_dir: grid/raw/audio_synced
+source_manifest_path: grid/manifests/grid_multispeaker.jsonl
+manifest_path: grid/manifests/grid_multispeaker_synced.jsonl
+failure_dir: grid/manifests/failures_multispeaker_synced
+processed_dir: grid/processed/multispeaker_synced
 
-# Minimal speaker-isolated development split for the audio-to-motion baseline.
-# Three speakers are sufficient for pipeline validation, but not for broad claims.
+# Preserve the E3 feasibility split while replacing only its incorrect audio source.
 speakers: [s1, s2, s3]
 max_samples: 100
 split_seed: 42
@@ -19,6 +20,10 @@ audio_sample_rate: 16000
 image_size: 256
 speaker_isolated: true
 resume: true
+
+audio_sync:
+  ffmpeg_executable: ffmpeg
+  workers: 8
 
 audio:
   n_mels: 80

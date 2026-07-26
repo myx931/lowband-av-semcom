@@ -120,24 +120,49 @@ def extract_audio_for_manifest(
                 resume=settings.resume,
                 overwrite=overwrite,
             ):
-                features, source_sample_rate = extract_aligned_log_mel(
+                features, timing = extract_aligned_log_mel(
                     resolve_record_path(sample.audio_path, settings.data_root),
                     frame_count=sample.frame_count,
+                    fps=sample.fps,
                     target_sample_rate=target_sample_rate,
                     config=audio_config,
                 )
                 atomic_save_npz(
                     output,
                     features=features,
-                    source_sample_rate=np.asarray(source_sample_rate, dtype=np.int64),
+                    source_sample_rate=np.asarray(
+                        timing.source_sample_rate,
+                        dtype=np.int64,
+                    ),
                     target_sample_rate=np.asarray(target_sample_rate, dtype=np.int64),
+                    source_duration_seconds=np.asarray(
+                        timing.source_duration_seconds,
+                        dtype=np.float64,
+                    ),
+                    expected_duration_seconds=np.asarray(
+                        timing.expected_duration_seconds,
+                        dtype=np.float64,
+                    ),
                 )
                 write_artifact_metadata(
                     output,
                     fingerprint,
-                    extra={"shape": list(features.shape)},
+                    extra={
+                        "shape": list(features.shape),
+                        "alignment_mode": timing.alignment_mode,
+                        "source_duration_seconds": timing.source_duration_seconds,
+                        "expected_duration_seconds": timing.expected_duration_seconds,
+                        "duration_ratio": timing.duration_ratio,
+                    },
                 )
-            updated.append(sample.with_artifact("audio_feature_path", relative_output))
+            updated_sample = sample.with_artifact("audio_feature_path", relative_output)
+            if (
+                updated_sample.audio_feature_path
+                and updated_sample.landmark_path
+                and updated_sample.face_crop_path
+            ):
+                updated_sample = replace(updated_sample, status="processed")
+            updated.append(updated_sample)
         except (OSError, RuntimeError, ValueError) as exc:
             updated.append(sample)
             failures.append(

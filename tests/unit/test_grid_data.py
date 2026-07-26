@@ -18,6 +18,7 @@ from av_semcom.data.grid import (
     write_manifest,
 )
 from av_semcom.data.splits import assign_speaker_splits
+from av_semcom.data.validation import validate_samples
 
 
 def _write_wav(path: Path, sample_rate: int = 25000) -> None:
@@ -141,3 +142,29 @@ def test_minimal_three_speaker_split_has_fixed_isolated_roles() -> None:
 
     assert assignments == {"s2": "test", "s1": "validation", "s3": "train"}
     assert len(set(assignments.values())) == 3
+
+
+def test_validation_rejects_audio_that_would_require_time_stretching(
+    tmp_path: Path,
+) -> None:
+    video_path = tmp_path / "grid/raw/video/s1/example"
+    video_path.mkdir(parents=True)
+    audio_path = tmp_path / "grid/raw/audio/s1/example.wav"
+    _write_wav(audio_path)
+    sample = GridSample(
+        sample_id="s1_example",
+        speaker_id="s1",
+        video_path="grid/raw/video/s1/example",
+        audio_path="grid/raw/audio/s1/example.wav",
+        fps=25,
+        sample_rate=25000,
+        frame_count=75,
+        split="pilot",
+    )
+
+    report = validate_samples([sample], tmp_path)
+
+    assert report.error_count == 1
+    assert "audio/video duration ratio" in report.errors[0]
+    assert report.audio_duration_ratio_min == pytest.approx(1 / 30)
+    assert report.audio_duration_ratio_max == pytest.approx(1 / 30)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import wave
 from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -16,6 +17,8 @@ class ValidationReport:
     sample_count: int
     speaker_count: int
     split_counts: dict[str, int]
+    audio_duration_ratio_min: float | None
+    audio_duration_ratio_max: float | None
     error_count: int
     errors: tuple[str, ...]
 
@@ -38,6 +41,7 @@ def validate_samples(
     seen_ids: set[str] = set()
     split_counts: dict[str, int] = {}
     speaker_splits: dict[str, set[str]] = {}
+    audio_duration_ratios: list[float] = []
     for sample in records:
         if sample.sample_id in seen_ids:
             errors.append(f"duplicate sample_id: {sample.sample_id}")
@@ -72,6 +76,20 @@ def validate_samples(
                 continue
             if not resolved.exists():
                 errors.append(f"{sample.sample_id}: {field_name} does not exist: {relative_path}")
+            elif field_name == "audio_path":
+                try:
+                    with wave.open(str(resolved), "rb") as handle:
+                        audio_duration = handle.getnframes() / handle.getframerate()
+                    expected_duration = sample.frame_count / sample.fps
+                    ratio = audio_duration / expected_duration
+                    audio_duration_ratios.append(ratio)
+                    if not 0.95 <= ratio <= 1.05:
+                        errors.append(
+                            f"{sample.sample_id}: audio/video duration ratio {ratio:.6f} "
+                            "is outside 0.95..1.05"
+                        )
+                except (OSError, wave.Error, ZeroDivisionError) as exc:
+                    errors.append(f"{sample.sample_id}: invalid audio timing metadata: {exc}")
 
     for speaker, splits in sorted(speaker_splits.items()):
         if len(splits) > 1:
@@ -80,6 +98,8 @@ def validate_samples(
         sample_count=len(records),
         speaker_count=len(speaker_splits),
         split_counts=split_counts,
+        audio_duration_ratio_min=(min(audio_duration_ratios) if audio_duration_ratios else None),
+        audio_duration_ratio_max=(max(audio_duration_ratios) if audio_duration_ratios else None),
         error_count=len(errors),
         errors=tuple(errors),
     )
