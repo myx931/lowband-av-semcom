@@ -34,6 +34,13 @@
 - 损失：首轮 L1 或 L2；速度和平滑约束后续作为可关闭项。
 - 指标：Landmark L1/L2、NME、Temporal Velocity Error；同步指标为可选 `TODO`。
 - 验收：按说话人测试，输出逐基线和逐说话人的结果。
+- 状态：已完成三说话人可行性验收。train/validation/test 分别为
+  `s3` 99 条、`s1` 99 条、`s2` 100 条；三个种子的 validation 原始运动 L1
+  为 `0.001775 ± 0.000058`，仅比 `train_mean` 的 `0.001780` 低约 0.30%。
+  test L1 为 `0.002529 ± 0.000106`，优于 `train_mean` 的 `0.002655`，但差于
+  `zero_motion` 的 `0.002149` 和不可部署的 `oracle_persistence` 的 `0.000615`。
+  全量冻结 LivePortrait 重建覆盖 199 条 validation/test 样本、1,194 条结果，
+  失败数为 0。该结果证明实现闭环，不构成稳健跨身份音频增益结论。
 
 ## E4：无信道预测残差价值验证
 
