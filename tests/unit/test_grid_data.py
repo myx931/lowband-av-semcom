@@ -82,6 +82,21 @@ def test_discovery_records_missing_pairs(tmp_path: Path) -> None:
     }
 
 
+def test_discovery_stops_after_requested_paired_subset(tmp_path: Path) -> None:
+    frame_dir = tmp_path / "grid/raw/video/s1/a_pair"
+    frame_dir.mkdir(parents=True)
+    Image.new("RGB", (16, 16)).save(frame_dir / "001.jpg")
+    _write_wav(tmp_path / "grid/raw/audio/s1/a_pair.wav")
+    _write_wav(tmp_path / "grid/raw/audio/s1/z_outside_subset.wav")
+    settings = _settings(tmp_path)
+    settings = GridSettings.from_config({**settings.config, "max_samples": 1})
+
+    samples, failures = discover_grid_samples(settings)
+
+    assert [sample.sample_id for sample in samples] == ["s1_a_pair"]
+    assert failures == []
+
+
 def test_manifest_round_trip(tmp_path: Path) -> None:
     sample = GridSample(
         sample_id="s1_x",

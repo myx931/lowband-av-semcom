@@ -18,15 +18,17 @@ def main() -> int:
     print("GRID must be downloaded manually. This script performs no network writes.")
     print(f"Dataset record and terms: {ZENODO_RECORD}")
     print(f"Requested pilot speakers: {', '.join(speakers)}")
-    print(f"s1 video frames: {S1_URL}")
+    print(f"s1 video archive (contains s1/*.mpg): {S1_URL}")
     print("  size: approximately 423.5 MB")
     print("  md5: cbd6556668f061b5c3681bc722659b39")
     print(f"25 kHz audio archive: {AUDIO_URL}")
     print("  size: approximately 2.6 GB")
     print("  md5: 4b3ac37b1a258f55d1eebe657de491a9")
     print("Expected extracted layout:")
+    print("  $DATA_ROOT/grid/raw/video_mpg/s1/<utterance_id>.mpg")
     print("  $DATA_ROOT/grid/raw/video/s1/<utterance_id>/*.jpg")
     print("  $DATA_ROOT/grid/raw/audio/s1/<utterance_id>.wav")
+    print("Use FFmpeg to extract the official 25 fps MPG files into JPG directories.")
     print("Cite DOI: 10.5281/zenodo.3625687")
     return 0
 

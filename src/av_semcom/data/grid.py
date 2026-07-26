@@ -204,6 +204,13 @@ def discover_grid_samples(settings: GridSettings) -> tuple[list[GridSample], lis
 
         paired_count = 0
         for utterance_id in all_ids:
+            # ``max_samples`` defines a bounded pilot scan.  Once enough valid
+            # pairs have been selected, files outside that window must not be
+            # reported as missing counterparts (for example when the complete
+            # audio archive accompanies a deliberately small video subset).
+            if settings.max_samples is not None and paired_count >= settings.max_samples:
+                break
+
             sample_id = f"{speaker_id}_{utterance_id}"
             video_path = video_by_id.get(utterance_id)
             audio_path = audio_by_id.get(utterance_id)
@@ -218,8 +225,6 @@ def discover_grid_samples(settings: GridSettings) -> tuple[list[GridSample], lis
                     )
                 )
                 continue
-            if settings.max_samples is not None and paired_count >= settings.max_samples:
-                break
 
             frame_count = len(sorted(video_path.glob("*.jpg")))
             if frame_count == 0:

@@ -25,12 +25,17 @@ export DATA_ROOT=/path/to/datasets
 python scripts/data/download_grid_instructions.py --speakers s1
 ```
 
-解压并整理为：
+Zenodo 的 `s1.zip` 实际包含 `s1/*.mpg`，并不是已经拆好的 JPG。先保留原始
+MPG，再用 FFmpeg 以原始 25 fps 拆帧；`audio_25k.zip` 中的音频位于
+`audio_25k/s1/*.wav`。整理后的输入为：
 
 ```text
 $DATA_ROOT/
 └── grid/
     ├── raw/
+    │   ├── video_mpg/
+    │   │   └── s1/
+    │   │       └── <utterance_id>.mpg
     │   ├── video/
     │   │   └── s1/
     │   │       └── <utterance_id>/
@@ -45,6 +50,19 @@ $DATA_ROOT/
     └── manifests/
         └── failures/
 ```
+
+例如，为一个视频拆帧：
+
+```bash
+mkdir -p "$DATA_ROOT/grid/raw/video/s1/bbaf2n"
+ffmpeg -nostdin -loglevel error \
+  -i "$DATA_ROOT/grid/raw/video_mpg/s1/bbaf2n.mpg" \
+  -q:v 2 "$DATA_ROOT/grid/raw/video/s1/bbaf2n/%06d.jpg"
+```
+
+首轮 pilot 只需对按文件名排序后的最多 20 个视频执行同样操作。每个 GRID
+视频应产生 75 张 JPG。FFmpeg 仅用于从官方 MPG 拆帧；后续五阶段直接读取
+JPG 和 WAV。
 
 ## 小子集处理
 
