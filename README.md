@@ -7,8 +7,9 @@
 ## 当前状态
 
 当前完成 Milestone 0（仓库初始化）、Milestone 1（研究设计文档）以及 Milestone 2
-的 GRID 小子集数据管线与合成闭环。真实 `s1` pilot 等待用户手动提供数据后验收。
-训练模型、第三方重建模型、残差传输与信道实验尚未实现，不宣称已经跑通。
+的 GRID 小子集数据管线。真实 `s1` pilot 已用 20 条样本完成预处理验收。
+Milestone 3 的冻结 LivePortrait 运动提取与重建敏感性基线已完成真实 GPU
+验收；训练模型、残差传输与信道实验尚未实现，不宣称已经跑通。
 
 研究路线：
 
@@ -66,6 +67,7 @@ outputs/{experiment_name}/{timestamp}/
 - [风险登记](docs/RISK_REGISTER.md)
 - [GitHub 任务清单](docs/ISSUE_BACKLOG.md)
 - [数据说明](data/README.md)
+- [运动与重建基线](docs/MOTION_BASELINE.md)
 - [第三方依赖说明](third_party/README.md)
 
 ## 研究边界

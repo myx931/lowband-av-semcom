@@ -1,0 +1,42 @@
+data:
+  dataset: grid
+  root: null
+  raw_video_dir: grid/raw/video
+  raw_audio_dir: grid/raw/audio
+  manifest_path: grid/manifests/grid_subset.jsonl
+  failure_dir: grid/manifests/failures
+  processed_dir: grid/processed
+  speakers: [s1]
+  max_samples: 20
+  split: pilot
+  split_seed: 42
+  validation_ratio: 0.1
+  test_ratio: 0.1
+  fps: 25
+  audio_sample_rate: 16000
+  image_size: 256
+  resume: true
+
+motion:
+  backend: liveportrait
+  backend_revision: 9b294b3d0536135442ea73cb01e6cb3ca7029dd3
+  repository: third_party/LivePortrait
+  model_root_env: MODEL_ROOT
+  output_dir: grid/processed/motion/liveportrait
+  device: cuda:0
+  half_precision: true
+  stitching: true
+  reconstruction_batch_size: 32
+  lip_indices: [6, 12, 14, 17, 19, 20]
+  representation: source_relative_lip_expression
+  dimension: 18
+
+experiment:
+  name: motion_sensitivity
+  output_dir: outputs/motion_sensitivity
+  save_sample_positions: [0, 9, 19]
+  metric_workers: 4
+  seeds: [42, 43, 44]
+  gaussian_sigma: [0.05, 0.1, 0.2, 0.5]
+  quantization_bits: [8, 6, 4, 3, 2]
+  keep_ratios: [0.75, 0.5, 0.25, 0.1]

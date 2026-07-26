@@ -32,6 +32,7 @@ class GridSample:
     audio_feature_path: str | None = None
     landmark_path: str | None = None
     face_crop_path: str | None = None
+    motion_path: str | None = None
     status: str = "discovered"
 
     @classmethod
@@ -60,7 +61,12 @@ class GridSample:
     def with_artifact(self, field_name: str, relative_path: str) -> GridSample:
         """Return a record updated with one known artifact path."""
 
-        if field_name not in {"audio_feature_path", "landmark_path", "face_crop_path"}:
+        if field_name not in {
+            "audio_feature_path",
+            "landmark_path",
+            "face_crop_path",
+            "motion_path",
+        }:
             raise ValueError(f"unsupported artifact field: {field_name}")
         return replace(self, **{field_name: relative_path})
 
