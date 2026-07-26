@@ -82,6 +82,10 @@ manifest 使用 JSONL，路径均相对 `DATA_ROOT`。必填字段为 `sample_id
 `video_path`、`audio_path`、`fps`、`sample_rate`、`frame_count`、`split`，处理后追加
 音频特征、关键点和裁剪路径。
 
+完成运动提取里程碑后还会追加可选 `motion_path`，指向
+`grid/processed/motion/<backend>/` 下的低维运动产物。运动配置和命令见
+[LivePortrait 运动基线](../docs/MOTION_BASELINE.md)。
+
 单个实际可用说话人只能标记为 `pilot`，不得用于正式实验结论。正式
 train/validation/test 至少需要三个实际存在且成功配对的说话人，并按说话人隔离。
 
