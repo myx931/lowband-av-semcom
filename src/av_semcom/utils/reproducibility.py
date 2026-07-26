@@ -21,11 +21,13 @@ def seed_everything(seed: int, *, deterministic: bool = True) -> None:
     if seed < 0:
         raise ValueError("seed must be non-negative")
 
+    if deterministic:
+        os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
+    os.environ["PYTHONHASHSEED"] = str(seed)
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
 
-    os.environ["PYTHONHASHSEED"] = str(seed)
     torch.use_deterministic_algorithms(deterministic, warn_only=True)

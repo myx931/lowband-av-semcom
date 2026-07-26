@@ -205,7 +205,7 @@ def _train_one_seed(
         weight_decay=settings.weight_decay,
     )
     use_amp = settings.mixed_precision and device.type == "cuda"
-    scaler_factory = getattr(torch.amp, "GradScaler")
+    scaler_factory = torch.amp.GradScaler  # type: ignore[attr-defined]
     scaler: Any = scaler_factory("cuda", enabled=use_amp)
     best_loss = float("inf")
     best_epoch = 0

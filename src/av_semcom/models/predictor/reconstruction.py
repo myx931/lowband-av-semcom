@@ -12,8 +12,8 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from PIL import Image
 from numpy.typing import NDArray
+from PIL import Image
 
 from av_semcom.data.grid import GridSample, resolve_record_path
 from av_semcom.data.landmarks import FaceLandmarkBackend, MediaPipeFaceMeshBackend
