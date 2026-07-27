@@ -57,23 +57,27 @@ def should_process(
     sidecar = metadata_path(output_path)
     if not output_path.exists() and not sidecar.exists():
         return True
-    if overwrite:
-        return True
     if not resume:
         raise FileExistsError(f"Output already exists: {output_path}")
     if not output_path.exists() or not sidecar.is_file():
+        if overwrite:
+            return True
         raise StaleArtifactError(f"Output or metadata sidecar is incomplete: {output_path}")
 
     try:
         metadata = json.loads(sidecar.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
+        if overwrite:
+            return True
         raise StaleArtifactError(f"Invalid metadata sidecar for {output_path}: {exc}") from exc
-    if metadata.get("config_fingerprint") != fingerprint:
-        raise StaleArtifactError(
-            f"Output was created with a different configuration: {output_path}. "
-            "Use --overwrite to replace it."
-        )
-    return False
+    if metadata.get("config_fingerprint") == fingerprint:
+        return False
+    if overwrite:
+        return True
+    raise StaleArtifactError(
+        f"Output was created with a different configuration: {output_path}. "
+        "Use --overwrite to replace it."
+    )
 
 
 def atomic_write_json(path: Path, payload: Mapping[str, Any]) -> None:

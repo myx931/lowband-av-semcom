@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from copy import deepcopy
+from dataclasses import replace
 from pathlib import Path
 
 from av_semcom.data.grid import GridSettings
@@ -25,6 +26,11 @@ def build_predictor_parser(description: str) -> argparse.ArgumentParser:
         action="store_true",
         help="Resume a matching run directory and skip completed seeds.",
     )
+    parser.add_argument(
+        "--reconstruction-batch-size",
+        type=_positive_int,
+        help="Override motion.reconstruction_batch_size for reconstruction only.",
+    )
     return parser
 
 
@@ -38,4 +44,16 @@ def predictor_settings_from_args(
     data_settings = GridSettings.from_config(config)
     predictor = AudioMotionSettings.from_config(config, data_settings)
     motion = MotionSettings.from_config(config, data_settings)
+    if args.reconstruction_batch_size is not None:
+        motion = replace(
+            motion,
+            reconstruction_batch_size=args.reconstruction_batch_size,
+        )
     return config, data_settings, predictor, motion
+
+
+def _positive_int(value: str) -> int:
+    parsed = int(value)
+    if parsed < 1:
+        raise argparse.ArgumentTypeError("must be a positive integer")
+    return parsed

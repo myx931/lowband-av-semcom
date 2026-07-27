@@ -6,8 +6,10 @@ import csv
 import json
 import os
 import tempfile
+import threading
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
+from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -16,7 +18,11 @@ from numpy.typing import NDArray
 from PIL import Image
 
 from av_semcom.data.grid import GridSample, resolve_record_path
-from av_semcom.data.landmarks import FaceLandmarkBackend, MediaPipeFaceMeshBackend
+from av_semcom.data.landmarks import (
+    FaceDetection,
+    FaceLandmarkBackend,
+    MediaPipeFaceMeshBackend,
+)
 from av_semcom.data.preprocessing import FailureRecord, atomic_write_json, write_failures
 from av_semcom.metrics.motion import compute_reconstruction_metrics
 from av_semcom.models.motion.config import MotionSettings
@@ -25,6 +31,31 @@ from av_semcom.models.motion.sequence import load_motion_sequence
 from av_semcom.models.predictor.artifacts import load_prediction
 from av_semcom.models.predictor.config import AudioMotionSettings
 from av_semcom.models.reconstruction.backend import ReconstructionBackend
+
+
+class _ThreadLocalMediaPipeFaceMeshBackend:
+    """Give each metric worker its own stateful MediaPipe graph."""
+
+    def __init__(self) -> None:
+        self._local = threading.local()
+        self._instances: list[MediaPipeFaceMeshBackend] = []
+        self._lock = threading.Lock()
+
+    def detect(self, rgb_image: np.ndarray) -> FaceDetection | None:
+        backend = getattr(self._local, "backend", None)
+        if backend is None:
+            backend = MediaPipeFaceMeshBackend()
+            self._local.backend = backend
+            with self._lock:
+                self._instances.append(backend)
+        return backend.detect(rgb_image)
+
+    def close(self) -> None:
+        with self._lock:
+            instances = tuple(self._instances)
+            self._instances.clear()
+        for backend in instances:
+            backend.close()
 
 
 def run_prediction_reconstruction(
@@ -64,12 +95,38 @@ def run_prediction_reconstruction(
     best_seed = _best_validation_seed(run_dir)
     representative_ids = _representative_sample_ids(evaluation_samples)
     output_root = run_dir / "reconstruction"
+    runtime_path = output_root / "runtime.json"
+    runtime = {
+        "experiment_fingerprint": fingerprint,
+        "reconstruction_batch_size": motion_settings.reconstruction_batch_size,
+        "evaluation_sample_count": len(evaluation_samples),
+    }
+    if runtime_path.is_file():
+        existing_runtime = json.loads(runtime_path.read_text(encoding="utf-8"))
+        if existing_runtime != runtime:
+            raise ValueError(
+                "reconstruction runtime settings do not match; "
+                "remove the incomplete reconstruction or use the original settings"
+            )
+    else:
+        atomic_write_json(runtime_path, runtime)
     rows: list[dict[str, Any]] = []
     failures: list[FailureRecord] = []
     owns_backend = backend is None
     active_backend = backend or create_reconstruction_backend(motion_settings)
     owns_landmarks = landmark_backend is None
-    landmarks = landmark_backend or MediaPipeFaceMeshBackend()
+    parallel_metrics = motion_settings.metric_workers > 1 and landmark_backend is None
+    landmarks: FaceLandmarkBackend = landmark_backend or (
+        _ThreadLocalMediaPipeFaceMeshBackend() if parallel_metrics else MediaPipeFaceMeshBackend()
+    )
+    metric_executor = (
+        ThreadPoolExecutor(
+            max_workers=motion_settings.metric_workers,
+            thread_name_prefix="audio-motion-metrics",
+        )
+        if parallel_metrics
+        else None
+    )
     try:
         for position, sample in enumerate(evaluation_samples, start=1):
             print(
@@ -101,6 +158,7 @@ def run_prediction_reconstruction(
                         save_representative_media and sample.sample_id in representative_ids
                     ),
                     output_root=output_root,
+                    metric_executor=metric_executor,
                 )
                 atomic_write_json(
                     sample_result,
@@ -121,6 +179,8 @@ def run_prediction_reconstruction(
                     )
                 )
     finally:
+        if metric_executor is not None:
+            metric_executor.shutdown(wait=True, cancel_futures=True)
         if owns_backend:
             active_backend.close()
         if owns_landmarks:
@@ -156,6 +216,7 @@ def _evaluate_reconstruction_sample(
     best_seed: int,
     save_media: bool,
     output_root: Path,
+    metric_executor: ThreadPoolExecutor | None,
 ) -> list[dict[str, Any]]:
     if sample.motion_path is None or sample.face_crop_path is None:
         raise ValueError("motion_path and face_crop_path are required")
@@ -182,6 +243,7 @@ def _evaluate_reconstruction_sample(
         _save_video(media_root / "oracle_lip.mp4", oracle, sequence.fps)
 
     rows: list[dict[str, Any]] = []
+    metric_jobs: list[Future[dict[str, Any]]] = []
     methods: list[tuple[str, int | None, Path]] = []
     for method in settings.baselines:
         methods.append(
@@ -210,31 +272,23 @@ def _evaluate_reconstruction_sample(
             mode="lip_only",
             lip_vector=prediction,
         )
-        reconstructed_detections = tuple(landmarks.detect(frame) for frame in reconstructed)
-        oracle_metrics = compute_reconstruction_metrics(
+        metric_arguments = (
+            sample,
+            method,
+            method_seed,
+            original,
             oracle,
             reconstructed,
-            landmark_backend=landmarks,
-            target_detections=oracle_detections,
-            reconstructed_detections=reconstructed_detections,
+            landmarks,
+            original_detections,
+            oracle_detections,
         )
-        original_metrics = compute_reconstruction_metrics(
-            original,
-            reconstructed,
-            landmark_backend=landmarks,
-            target_detections=original_detections,
-            reconstructed_detections=reconstructed_detections,
-        )
-        row = {
-            "sample_id": sample.sample_id,
-            "speaker_id": sample.speaker_id,
-            "split": sample.split,
-            "method": method,
-            "seed": method_seed,
-            **{f"oracle_{key}": value for key, value in oracle_metrics.to_dict().items()},
-            **{f"original_{key}": value for key, value in original_metrics.to_dict().items()},
-        }
-        rows.append(row)
+        if metric_executor is None:
+            rows.append(_reconstruction_metric_row(*metric_arguments))
+        else:
+            metric_jobs.append(
+                metric_executor.submit(_reconstruction_metric_row, *metric_arguments)
+            )
         if save_media and (method != "audio_gru" or method_seed == best_seed):
             label = method if method_seed is None else f"audio_gru_seed_{method_seed}"
             media_root = output_root / "media" / sample.split / sample.sample_id
@@ -245,7 +299,46 @@ def _evaluate_reconstruction_sample(
                 oracle,
                 reconstructed,
             )
+    for future in metric_jobs:
+        rows.append(future.result())
     return rows
+
+
+def _reconstruction_metric_row(
+    sample: GridSample,
+    method: str,
+    method_seed: int | None,
+    original: NDArray[np.uint8],
+    oracle: NDArray[np.uint8],
+    reconstructed: NDArray[np.uint8],
+    landmarks: FaceLandmarkBackend,
+    original_detections: Sequence[FaceDetection | None],
+    oracle_detections: Sequence[FaceDetection | None],
+) -> dict[str, Any]:
+    reconstructed_detections = tuple(landmarks.detect(frame) for frame in reconstructed)
+    oracle_metrics = compute_reconstruction_metrics(
+        oracle,
+        reconstructed,
+        landmark_backend=landmarks,
+        target_detections=oracle_detections,
+        reconstructed_detections=reconstructed_detections,
+    )
+    original_metrics = compute_reconstruction_metrics(
+        original,
+        reconstructed,
+        landmark_backend=landmarks,
+        target_detections=original_detections,
+        reconstructed_detections=reconstructed_detections,
+    )
+    return {
+        "sample_id": sample.sample_id,
+        "speaker_id": sample.speaker_id,
+        "split": sample.split,
+        "method": method,
+        "seed": method_seed,
+        **{f"oracle_{key}": value for key, value in oracle_metrics.to_dict().items()},
+        **{f"original_{key}": value for key, value in original_metrics.to_dict().items()},
+    }
 
 
 def _representative_sample_ids(samples: Sequence[GridSample]) -> set[str]:

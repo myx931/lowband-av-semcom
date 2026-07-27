@@ -34,6 +34,15 @@ def test_stale_artifact_requires_overwrite(tmp_path: Path) -> None:
     assert should_process(output, config_fingerprint({"version": 2}), overwrite=True)
 
 
+def test_overwrite_still_skips_matching_artifact(tmp_path: Path) -> None:
+    output = tmp_path / "artifact.npz"
+    output.write_bytes(b"artifact")
+    fingerprint = config_fingerprint({"version": 1})
+    write_artifact_metadata(output, fingerprint)
+
+    assert not should_process(output, fingerprint, overwrite=True)
+
+
 def test_interpolate_missing_fills_middle_and_edges() -> None:
     values = np.asarray([[0.0], [np.nan], [2.0], [np.nan]], dtype=np.float32)
     valid = np.asarray([True, False, True, False])
