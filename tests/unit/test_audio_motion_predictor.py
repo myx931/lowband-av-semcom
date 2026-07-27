@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from pathlib import Path
 
@@ -13,6 +15,7 @@ from av_semcom.data.grid import GridSample, GridSettings
 from av_semcom.data.preprocessing import atomic_save_npz
 from av_semcom.models.motion.perturbations import fit_motion_normalizer
 from av_semcom.models.motion.sequence import save_motion_sequence
+from av_semcom.models.predictor import reconstruction
 from av_semcom.models.predictor.artifacts import (
     atomic_save_checkpoint,
     load_checkpoint,
@@ -223,3 +226,39 @@ def test_motion_normalizer_fixture_uses_train_scope(tmp_path: Path) -> None:
     sequence = load_motion_sequence(tmp_path / sample.motion_path)
     normalizer = fit_motion_normalizer([sequence], scope="train_stats")
     assert normalizer.scope == "train_stats"
+
+
+def test_parallel_landmarks_use_one_backend_per_worker(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    barrier = threading.Barrier(2)
+
+    class ThreadBoundLandmarks:
+        def __init__(self) -> None:
+            self.owner = threading.get_ident()
+            self.closed = False
+            instances.append(self)
+
+        def detect(self, rgb_image: np.ndarray) -> None:
+            assert threading.get_ident() == self.owner
+            barrier.wait(timeout=5)
+            return None
+
+        def close(self) -> None:
+            self.closed = True
+
+    instances: list[ThreadBoundLandmarks] = []
+    monkeypatch.setattr(
+        reconstruction,
+        "MediaPipeFaceMeshBackend",
+        ThreadBoundLandmarks,
+    )
+    landmarks = reconstruction._ThreadLocalMediaPipeFaceMeshBackend()
+    frame = np.zeros((8, 8, 3), dtype=np.uint8)
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = list(executor.map(landmarks.detect, (frame, frame)))
+    landmarks.close()
+
+    assert results == [None, None]
+    assert len(instances) == 2
+    assert all(instance.closed for instance in instances)
