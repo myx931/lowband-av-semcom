@@ -64,6 +64,21 @@ def run_prediction_reconstruction(
     best_seed = _best_validation_seed(run_dir)
     representative_ids = _representative_sample_ids(evaluation_samples)
     output_root = run_dir / "reconstruction"
+    runtime_path = output_root / "runtime.json"
+    runtime = {
+        "experiment_fingerprint": fingerprint,
+        "reconstruction_batch_size": motion_settings.reconstruction_batch_size,
+        "evaluation_sample_count": len(evaluation_samples),
+    }
+    if runtime_path.is_file():
+        existing_runtime = json.loads(runtime_path.read_text(encoding="utf-8"))
+        if existing_runtime != runtime:
+            raise ValueError(
+                "reconstruction runtime settings do not match; "
+                "remove the incomplete reconstruction or use the original settings"
+            )
+    else:
+        atomic_write_json(runtime_path, runtime)
     rows: list[dict[str, Any]] = []
     failures: list[FailureRecord] = []
     owns_backend = backend is None
