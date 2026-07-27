@@ -23,3 +23,12 @@ E3 的因果音频到运动训练入口为 `train/train_audio_to_motion.py`。�
 冻结 LivePortrait 重建评价分别位于 `eval/evaluate_audio_to_motion.py` 和
 `eval/reconstruct_audio_to_motion.py`。训练与重建使用同一个被 Git 忽略的运行
 目录，但分别在 Python 3.11 CUDA 训练环境和 Python 3.10 LivePortrait 环境执行。
+
+长时间重建任务可在另一个终端只读查看，不会修改实验产物：
+
+```bash
+PYTHONPATH=src python scripts/eval/show_reconstruction_progress.py \
+  --run-dir outputs/audio_to_motion_ten_speaker/<timestamp>
+```
+
+增加 `--watch 10` 每 10 秒刷新；增加 `--json` 输出机器可读快照。
