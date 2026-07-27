@@ -15,7 +15,10 @@ Milestone 3 的冻结 LivePortrait 运动提取与重建敏感性基线及三说
 同步 MPG 音轨和严格时间戳 log-Mel 修复已完成 CPU 数据验收，并已重新完成 E3
 三种子训练与 199 条样本的冻结重建评价。修正后的 GRU 在 validation/test 上均
 超过 train mean，但 test 仍未超过 zero motion，因此只支持有限可行性结论。
-残差传输与信道实验尚未开始。
+随后扩充到十说话人和 1,000 条样本；8/1/1 个身份隔离的 train/validation/test
+划分完成三种子训练及 200 条冻结重建，GRU 在 test 上同时超过 train mean 和
+zero motion。E4 无信道残差实验已完成 6,600 条运动空间固定预算结果，冻结
+LivePortrait 残差重建评价正在进行。AWGN、JSCC 和学习式选择器尚未开始。
 
 研究路线：
 
