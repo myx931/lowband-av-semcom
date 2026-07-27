@@ -255,8 +255,8 @@ def _evaluate_sample(
         raise RuntimeError("reconstruction backend returned the wrong candidate count")
     full_index = labels.index(("full_residual_oracle", "raw", 18, None))
     oracle_frames = reconstructed_sets[full_index]
-    original_detections = tuple(landmarks.detect(frame) for frame in original_frames)
-    oracle_detections = tuple(landmarks.detect(frame) for frame in oracle_frames)
+    original_detections = _detect_sequence(landmarks, original_frames)
+    oracle_detections = _detect_sequence(landmarks, oracle_frames)
     jobs: list[Future[dict[str, Any]]] = []
     rows: list[dict[str, Any]] = []
     for condition, reconstructed in zip(labels, reconstructed_sets, strict=True):
@@ -354,7 +354,7 @@ def _metric_row(
     original_detections: Sequence[Any],
     oracle_detections: Sequence[Any],
 ) -> dict[str, Any]:
-    reconstructed_detections = tuple(landmarks.detect(frame) for frame in reconstructed)
+    reconstructed_detections = _detect_sequence(landmarks, reconstructed)
     oracle_metrics = compute_reconstruction_metrics(
         oracle_frames,
         reconstructed,
@@ -381,6 +381,16 @@ def _metric_row(
         **{f"oracle_{key}": value for key, value in oracle_metrics.to_dict().items()},
         **{f"original_{key}": value for key, value in original_metrics.to_dict().items()},
     }
+
+
+def _detect_sequence(
+    landmarks: FaceLandmarkBackend,
+    frames: np.ndarray,
+) -> tuple[Any, ...]:
+    reset = getattr(landmarks, "reset", None)
+    if callable(reset):
+        reset()
+    return tuple(landmarks.detect(frame) for frame in frames)
 
 
 def _representative_sample_ids(samples: Sequence[GridSample]) -> set[str]:
