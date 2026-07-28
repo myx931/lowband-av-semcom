@@ -87,3 +87,57 @@ These are oracle-magnitude selection results because the sender observes the
 true residual. They support proceeding to reconstruction and later fixed-rule
 selector experiments, but do not yet establish a deployable importance
 predictor or a channel bitrate.
+
+## Ten-speaker reconstruction result
+
+The frozen LivePortrait run completed all 200 validation/test samples. Each
+sample produced 23 rows: the unmodified prediction, raw- and
+train-normalized-magnitude Top-K for `K=2/4/6/9`, three deterministic random
+masks at each budget, the full-residual oracle, and the dense-motion oracle.
+The final artifacts contain 4,600 rows, zero failures, and one configuration
+fingerprint. Re-running with `--resume` left the completion marker and existing
+sample hashes unchanged.
+
+The primary metrics compare each candidate with the lip-only oracle
+reconstruction. Means for the test speaker `s7` are:
+
+| Condition | K / 18 | Mouth ROI MAE ↓ | Mouth NME ↓ | PSNR (dB) ↑ | SSIM ↑ |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Audio prediction only | 0 | 5.299 | 0.02195 | 40.603 | 0.98745 |
+| Raw-magnitude Top-K | 2 | 3.214 | 0.01184 | 44.494 | 0.99452 |
+| Raw-magnitude Top-K | 4 | 2.100 | 0.00789 | 47.857 | 0.99698 |
+| Raw-magnitude Top-K | 6 | 1.380 | 0.00516 | 50.811 | 0.99816 |
+| Raw-magnitude Top-K | 9 | 0.688 | 0.00250 | 55.321 | 0.99907 |
+| Normalized-magnitude Top-K | 4 | 4.235 | 0.01586 | 42.346 | 0.99086 |
+| Random K, three-seed mean | 4 | 4.852 ± 0.018 | 0.01913 ± 0.00008 | 41.184 ± 0.019 | 0.98925 ± 0.00002 |
+| Full residual / dense motion | 18 | 0.000 | 0.00000 | infinity | 1.00000 |
+
+At `K=4`, raw-magnitude selection lowers test mouth ROI MAE by 60.4% and NME
+by 64.0% relative to the audio prediction. It also lowers them by 56.7% and
+58.7%, respectively, relative to the matched-budget random control. The
+validation speaker `s3` shows the same ordering:
+
+| Condition | K / 18 | Mouth ROI MAE ↓ | Mouth NME ↓ | PSNR (dB) ↑ | SSIM ↑ |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Audio prediction only | 0 | 6.885 | 0.02248 | 38.580 | 0.98197 |
+| Raw-magnitude Top-K | 4 | 2.176 | 0.00612 | 47.494 | 0.99681 |
+| Normalized-magnitude Top-K | 4 | 4.465 | 0.01310 | 41.748 | 0.99010 |
+| Random K, three-seed mean | 4 | 6.028 ± 0.025 | 0.01941 ± 0.00007 | 39.410 ± 0.044 | 0.98501 ± 0.00010 |
+| Full residual / dense motion | 18 | 0.000 | 0.00000 | infinity | 1.00000 |
+
+All oracle landmark detection coverage values are 1.0. Full residual and dense
+motion give identical frames, zero oracle error, SSIM 1.0, and infinite PSNR,
+which verifies that residual addition and reconstruction are internally
+consistent.
+
+Metrics against the original face crops remain nearly flat as K increases
+(test mouth MAE is `11.732` for prediction-only and `11.599` for the dense
+oracle). This secondary comparison includes the frozen generator's appearance
+and rendering gap; it must not be used to negate the controlled lip-motion
+comparison or to claim photorealistic recovery of the original video.
+
+The experiment therefore establishes an oracle sparse-residual reconstruction
+upper bound. It does not establish that the receiver can obtain the selected
+values without transmitting indices and amplitudes, that float values have
+been quantized or entropy-coded, or that the behavior survives AWGN. Those
+questions remain for E5 and the deployable selector work.
