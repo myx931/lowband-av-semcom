@@ -1,4 +1,4 @@
-.PHONY: setup lint format test smoke motion-smoke audio-smoke jscc-smoke clean
+.PHONY: setup lint format test smoke motion-smoke audio-smoke jscc-smoke gate-smoke clean
 
 PYTHON ?= python
 
@@ -30,6 +30,9 @@ audio-smoke:
 
 jscc-smoke:
 	$(PYTHON) -m pytest tests/smoke/test_jscc_pipeline.py
+
+gate-smoke:
+	$(PYTHON) -m pytest tests/smoke/test_channel_gate_pipeline.py
 
 clean:
 	rm -rf .pytest_cache .mypy_cache .ruff_cache build dist htmlcov

@@ -87,3 +87,16 @@ PYTHONPATH=src python scripts/eval/reconstruct_residual_jscc.py \
 
 正式配置必须使用 `channel.backend: sionna`。`C` 表示每个有效非参考帧的复数
 信道符号数，不是比特率；详细冻结协议见 `docs/JSCC_BASELINE.md`。
+
+E6 首先在 validation 上冻结低 SNR 不发送的安全门控，再只读评价已有 E5 test
+指标：
+
+```bash
+PYTHONPATH=src "$SIONNA_PYTHON" scripts/eval/evaluate_channel_gate.py \
+  --config configs/experiment/residual_jscc_ten_speaker.yaml \
+  --e5-run-dir outputs/residual_jscc/<timestamp>
+```
+
+校准网格必须与 E5 test SNR 错开。策略落盘前不得读取 test 数值；`--resume`
+需要同时提供打印出的 `--run-dir`，并拒绝来源哈希或配置不匹配。详细协议见
+`docs/CHANNEL_GATE_BASELINE.md`。
