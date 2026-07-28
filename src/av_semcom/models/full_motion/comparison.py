@@ -187,6 +187,8 @@ def _motion_comparison_rows(
         sample_id, channel_uses, snr_db, noise_seed = key
         residual = residual_index[key]
         full = full_index[key]
+        if residual["speaker_id"] != full["speaker_id"] or residual["split"] != full["split"]:
+            raise ValueError(f"matched sample identity differs: {sample_id}")
         row: dict[str, Any] = {
             "sample_id": sample_id,
             "speaker_id": residual["speaker_id"],
@@ -267,6 +269,9 @@ def _summarize_motion(
                 record[f"{prefix}_{metric}"] = float(
                     np.mean([float(row[f"{prefix}_{metric}"]) for row in members])
                 )
+        record["residual_relative_advantage_l1_percent"] = (
+            float(record["residual_advantage_l1"]) / float(record["full_motion_l1"]) * 100.0
+        )
         output.append(record)
     return output
 
@@ -291,6 +296,10 @@ def _video_comparison_rows(
     for channel_uses, snr_db in sorted(residual_index):
         residual = residual_index[(channel_uses, snr_db)]
         full = full_index[(channel_uses, snr_db)]
+        if int(residual["sample_count"]) != int(full["sample_count"]) or int(
+            residual["noise_seed"]
+        ) != int(full["noise_seed"]):
+            raise ValueError("video sample count or nominal noise seed differs")
         row: dict[str, Any] = {
             "channel_uses": channel_uses,
             "snr_db": snr_db,
@@ -309,6 +318,9 @@ def _video_comparison_rows(
                 "oracle_mouth_nme",
             }:
                 row[f"residual_advantage_{metric}"] = full_value - residual_value
+                row[f"residual_relative_advantage_{metric}_percent"] = (
+                    (full_value - residual_value) / full_value * 100.0
+                )
         rows.append(row)
     return rows
 

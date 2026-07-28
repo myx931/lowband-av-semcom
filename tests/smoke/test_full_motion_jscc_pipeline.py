@@ -265,11 +265,9 @@ def test_full_motion_train_evaluate_and_resume(tmp_path: Path) -> None:
     assert training["representation"] == "train_standardized_full_18d_motion"
     assert summary["result_count"] == 8
     assert summary["bitrate_claimed"] is False
-    assert exported["condition_count_per_sample"] == 4
+    assert exported["condition_count_per_sample"] == 2
     assert [condition.family for condition in bundle.conditions] == [
-        "audio_prediction",
         "full_motion_oracle",
-        "noiseless_autoencoder",
         "jscc_awgn",
     ]
     assert comparison["motion_pair_count"] == 2

@@ -16,6 +16,7 @@
 | E5 | Sionna PHY 2.0.1 复数 AWGN；12 个残差 JSCC 模型、15,800 条 test 运动指标和 2,200 条视频指标，失败 0 | 0/5/10 dB 发送残差有效，训练范围外 -5 dB 会退化 |
 | E6 | validation-only SNR 门控、12 个 hard Top-K scorer 和 24 模型 validation 消融 | 门控消除 -5 dB 退化；learned scorer 只在 K=2/4 有有限收益，K=6/8 负结果不能由 SNR 输入或速度损失解释 |
 | E6.5 | 冻结 E5/E6 的通信代价与率—质量报告 | `C=1/2/3/4` 对应 74/148/222/296 复符号/段；所有 24 个可发送稀疏点均被同速率 dense residual JSCC 支配 |
+| E7 | 匹配网络规模、Sionna AWGN 和复符号预算的 full-motion 与 residual JSCC；12 个新模型、15,800 条运动记录、1,700 条视频指标和 4,800 个冻结配对 | residual 在运动 L1 16 组中胜 14 组、嘴部 NME 中胜 13 组；低/中 SNR 与紧预算优势最稳定，高 SNR、大预算时完整运动追平 |
 
 ## 规范化正式运行
 
@@ -33,6 +34,8 @@
 | E6 scorer | `outputs/residual_scorer/20260728T102637.647750Z` | 完成 |
 | E6 validation 消融 | `outputs/residual_scorer_validation_ablation/20260728T112523.904356Z` | 完成且未访问 test |
 | 通信代价报告 | `outputs/communication_report/20260728T120635.097427Z` | 完成，冻结源哈希已保存 |
+| E7 full-motion JSCC | `outputs/full_motion_jscc/20260728T123819.525394Z` | 完成；100 条视频、1,700 条指标、失败 0 |
+| E7 冻结匹配比较 | `outputs/full_motion_vs_residual/20260728T151133.243833Z` | 完成；4,800 个运动配对、16 个视频组 |
 
 ## 作废实验与本地清理
 
@@ -68,6 +71,8 @@
 - dense residual JSCC 在 0/5/10 dB 能改善运动和嘴部重建；
 - validation-only 门控能在 -5 dB 安全回退；
 - 当前 learned hard Top-K 不是稳定优于规则或 dense 编码的主要贡献。
+- 匹配预算下 residual JSCC 的优势主要位于低/中 SNR 和紧预算；它不是在所有
+  条件下都优于完整运动。
 
 目前不能陈述：
 
@@ -77,7 +82,7 @@
 - 当前 scorer 在所有预算优于原始幅度规则；
 - 已计入音频链路、参考脸、索引、调制编码或协议头开销。
 
-下一项必要实验是以同一 Sionna AWGN、同一 `C` 和同一模型规模，比较完整
-18 维运动与预测残差 JSCC。现有 E3/E5/E6 结果全部冻结复用，只训练缺失的完整
-运动对照。
-
+核心仿真链路 E0–E7 已闭环。下一项必要工作不是继续调已有模型，而是从冻结产物
+生成论文主比较表、率—质量图、逐样本不确定性统计和少量代表性可视化，并明确将
+最终方法定位为“音频预测 + dense residual JSCC + validation-only 低 SNR
+安全回退”。真实数字 bitstream、跨数据集泛化和衰落信道属于可选未来工作。

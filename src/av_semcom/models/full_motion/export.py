@@ -76,6 +76,7 @@ def export_full_motion_candidates(
             "test_snr_db": settings.test_snr_db,
             "selected_model_seeds": selected,
             "representation": "train_standardized_full_18d_motion",
+            "condition_protocol": "full_motion_oracle_plus_awgn_only_v1",
         }
     )
     output_root = run_dir / "reconstruction_candidates"
@@ -137,13 +138,17 @@ def export_full_motion_candidates(
         "candidate_fingerprint": candidate_fingerprint,
         "source_test_metrics_sha256": file_sha256(metrics_path),
         "representation": "train_standardized_full_18d_motion",
+        "condition_protocol": "full_motion_oracle_plus_awgn_only_v1",
         "selection_rule": "minimum_validation_normalized_mse_per_channel_use",
         "selected_model_seeds": {str(key): value for key, value in selected.items()},
         "split": reconstruction.split,
         "noise_seed": reconstruction.noise_seed,
         "sample_count": len(data),
-        "condition_count_per_sample": 2
-        + len(settings.channel_uses) * (1 + len(settings.test_snr_db)),
+        "condition_count_per_sample": 1 + len(settings.channel_uses) * len(settings.test_snr_db),
+        "omitted_redundant_video_conditions": [
+            "audio_prediction_reused_from_e5",
+            "noiseless_autoencoder_already_evaluated_in_motion_space",
+        ],
         "maximum_motion_metric_difference": maximum_difference,
     }
     atomic_write_json(output_root / "runtime.json", runtime)
@@ -167,14 +172,6 @@ def _build_bundle(
     transport = item.transport
     conditions = [
         JSCCCondition(
-            condition_id="audio_prediction",
-            family="audio_prediction",
-            channel_uses=None,
-            model_seed=None,
-            snr_db=None,
-            noise_seed=None,
-        ),
-        JSCCCondition(
             condition_id="full_motion_oracle",
             family="full_motion_oracle",
             channel_uses=None,
@@ -183,7 +180,7 @@ def _build_bundle(
             noise_seed=None,
         ),
     ]
-    vectors = [source.prediction.copy(), source.target.copy()]
+    vectors = [source.target.copy()]
     normalized = torch.from_numpy(transport.normalized_residual).unsqueeze(0)
     mask = torch.from_numpy(transport.transmission_mask).unsqueeze(0)
     for uses in settings.channel_uses:
@@ -192,28 +189,6 @@ def _build_bundle(
         active = normalized.to(device)
         active_mask = mask.to(device)
         seed = selected_seeds[uses]
-        noiseless = model(active, active_mask, 0.0, add_noise=False)
-        conditions.append(
-            JSCCCondition(
-                condition_id=condition_id(
-                    "noiseless_autoencoder",
-                    channel_uses=uses,
-                    model_seed=seed,
-                ),
-                family="noiseless_autoencoder",
-                channel_uses=uses,
-                model_seed=seed,
-                snr_db=None,
-                noise_seed=None,
-            )
-        )
-        vectors.append(
-            _reconstruct(
-                transport,
-                noiseless.decoded_residual[0].float().cpu().numpy(),
-                motion_std,
-            )
-        )
         for snr_index, snr_db in enumerate(settings.test_snr_db):
             result = model(
                 active,

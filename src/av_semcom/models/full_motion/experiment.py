@@ -102,6 +102,7 @@ def run_full_motion_training(
                     seed,
                     model_dir,
                     fingerprint,
+                    log_label="full-motion-jscc",
                 )
             )
     summary = {

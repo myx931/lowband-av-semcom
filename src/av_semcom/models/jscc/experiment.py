@@ -252,6 +252,8 @@ def _train_one_model(
     seed: int,
     model_dir: Path,
     fingerprint: str,
+    *,
+    log_label: str = "residual-jscc",
 ) -> dict[str, Any]:
     seed_everything(seed, deterministic=settings.deterministic)
     device = _resolve_device(settings.device)
@@ -311,7 +313,7 @@ def _train_one_model(
         }
         history.append(row)
         print(
-            f"[residual-jscc] C={channel_uses} seed={seed} epoch={epoch} "
+            f"[{log_label}] C={channel_uses} seed={seed} epoch={epoch} "
             f"train_mse={train_loss:.6f} validation_mse={validation_loss:.6f}",
             flush=True,
         )
