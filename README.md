@@ -100,6 +100,7 @@ outputs/{experiment_name}/{timestamp}/
 ## 文档导航
 
 - [课题实验全景说明书（推荐先读）](docs/THESIS_EXPERIMENT_GUIDE_CN.md)
+- [论文曲线、数据与结论速查](docs/user_notes/THESIS_RESULTS_CHEATSHEET_CN.md)
 - [项目规范](docs/PROJECT_SPEC.md)
 - [研究问题](docs/RESEARCH_QUESTIONS.md)
 - [实验计划](docs/EXPERIMENT_PLAN.md)
