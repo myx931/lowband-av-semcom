@@ -94,6 +94,7 @@ outputs/{experiment_name}/{timestamp}/
 
 ## 文档导航
 
+- [课题实验全景说明书（推荐先读）](docs/THESIS_EXPERIMENT_GUIDE_CN.md)
 - [项目规范](docs/PROJECT_SPEC.md)
 - [研究问题](docs/RESEARCH_QUESTIONS.md)
 - [实验计划](docs/EXPERIMENT_PLAN.md)
@@ -109,6 +110,7 @@ outputs/{experiment_name}/{timestamp}/
 - [信道感知残差选择器基线](docs/RESIDUAL_SCORER_BASELINE.md)
 - [残差选择器 validation-only 消融](docs/RESIDUAL_SCORER_VALIDATION_ABLATION.md)
 - [通信代价与率—质量报告](docs/COMMUNICATION_RATE_QUALITY.md)
+- [完整运动与预测残差匹配 JSCC 对照](docs/FULL_MOTION_JSCC_CONTROL.md)
 - [项目进展与实验归档](docs/PROJECT_PROGRESS_ARCHIVE.md)
 - [第三方依赖说明](third_party/README.md)
 
