@@ -33,6 +33,8 @@ class JSCCCondition:
         if self.family not in {
             "prediction_only",
             "full_residual_oracle",
+            "audio_prediction",
+            "full_motion_oracle",
             "noiseless_autoencoder",
             "jscc_awgn",
         }:
@@ -167,7 +169,12 @@ def condition_id(
 ) -> str:
     """Build a readable stable condition identifier."""
 
-    if family in {"prediction_only", "full_residual_oracle"}:
+    if family in {
+        "prediction_only",
+        "full_residual_oracle",
+        "audio_prediction",
+        "full_motion_oracle",
+    }:
         return family
     if channel_uses is None or model_seed is None:
         raise ValueError("channel condition IDs require channel_uses and model_seed")

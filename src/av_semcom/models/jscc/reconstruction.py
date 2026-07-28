@@ -245,7 +245,7 @@ def _evaluate_sample(
     oracle_index = next(
         index
         for index, condition in enumerate(bundle.conditions)
-        if condition.family == "full_residual_oracle"
+        if condition.family in {"full_residual_oracle", "full_motion_oracle"}
     )
     oracle_frames = reconstructed_sets[oracle_index]
     original_detections = _detect_sequence(landmarks, original_frames)
@@ -356,7 +356,7 @@ def _save_representative_media(
     _save_video(media_root / "original.mp4", original, fps)
     _save_video(media_root / "oracle.mp4", oracle, fps)
     for condition, frames in zip(bundle.conditions, reconstructed_sets, strict=True):
-        selected = condition.family == "prediction_only" or (
+        selected = condition.family in {"prediction_only", "audio_prediction"} or (
             condition.channel_uses == media_channel_uses
             and condition.family in {"noiseless_autoencoder", "jscc_awgn"}
         )
@@ -420,7 +420,7 @@ def _summarize(
 def _write_plots(path: Path, summary: Mapping[str, Any]) -> None:
     groups = summary["groups"]
     prediction = next(
-        (group for group in groups if group["family"] == "prediction_only"),
+        (group for group in groups if group["family"] in {"prediction_only", "audio_prediction"}),
         None,
     )
     if prediction is None:

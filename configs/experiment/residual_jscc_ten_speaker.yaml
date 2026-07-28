@@ -162,3 +162,8 @@ communication_report:
   digital_bitrate_defined: false
   include_audio_side_information_cost: false
   include_reference_face_cost: false
+
+full_motion_jscc:
+  output_dir: outputs/full_motion_jscc
+  comparison_output_dir: outputs/full_motion_vs_residual
+  representation: train_standardized_full_18d_motion
