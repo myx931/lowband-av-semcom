@@ -68,6 +68,10 @@ PYTHONPATH=src "$SIONNA_PYTHON" scripts/eval/evaluate_residual_jscc.py \
   --config configs/experiment/residual_jscc_ten_speaker.yaml \
   --e3-run-dir outputs/audio_to_motion_ten_speaker/<timestamp> \
   --run-dir outputs/residual_jscc/<timestamp>
+
+PYTHONPATH=src "$SIONNA_PYTHON" scripts/eval/report_residual_jscc.py \
+  --config configs/experiment/residual_jscc_ten_speaker.yaml \
+  --run-dir outputs/residual_jscc/<timestamp>
 ```
 
 正式配置必须使用 `channel.backend: sionna`。`C` 表示每个有效非参考帧的复数

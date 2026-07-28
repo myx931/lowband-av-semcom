@@ -197,7 +197,10 @@ def run_jscc_evaluation(
     _atomic_write_jsonl(run_dir / "test_metrics.jsonl", rows)
     summary = _summarize_test_rows(rows, settings)
     atomic_write_json(run_dir / "evaluation_summary.json", summary)
-    _write_evaluation_summary_csv(run_dir / "evaluation_summary.csv", summary["groups"])
+    _write_evaluation_summary_csv(
+        run_dir / "evaluation_summary.csv",
+        summary["seed_aggregate"],
+    )
     atomic_write_json(
         marker,
         {
@@ -207,6 +210,37 @@ def run_jscc_evaluation(
             "result_count": len(rows),
         },
     )
+    return summary
+
+
+def write_jscc_report(settings: JSCCSettings, run_dir: Path) -> dict[str, Any]:
+    """Derive multi-seed tables and curves from an immutable test JSONL."""
+
+    run_dir = run_dir.resolve()
+    marker_path = run_dir / "evaluation_complete.json"
+    marker = _read_json(marker_path)
+    metrics_path = run_dir / "test_metrics.jsonl"
+    rows = _read_jsonl(metrics_path)
+    if len(rows) != int(marker.get("result_count", -1)):
+        raise ValueError("test metric row count does not match completion marker")
+    input_provenance = _read_json(run_dir / "input_provenance.json")
+    if input_provenance.get("channel_backend") != settings.channel_backend:
+        raise ValueError("report channel backend does not match training run")
+    summary = _summarize_test_rows(rows, settings)
+    summary.update(
+        {
+            "experiment_fingerprint": marker["experiment_fingerprint"],
+            "source_metrics_sha256": file_sha256(metrics_path),
+            "report_git_commit": _git_commit(),
+            "report_created_at": datetime.now(timezone.utc).isoformat(),
+        }
+    )
+    atomic_write_json(run_dir / "report_summary.json", summary)
+    _write_evaluation_summary_csv(
+        run_dir / "report_summary.csv",
+        summary["seed_aggregate"],
+    )
+    _write_snr_plots(run_dir / "plots", summary)
     return summary
 
 
@@ -551,8 +585,9 @@ def _summarize_test_rows(
                 },
             }
         )
+    seed_aggregate = _aggregate_model_seeds(groups, settings)
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "status": "evaluation_complete",
         "channel_backend": settings.channel_backend,
         "channel_model": "complex_awgn",
@@ -561,7 +596,68 @@ def _summarize_test_rows(
         "bitrate_claimed": False,
         "result_count": len(rows),
         "groups": groups,
+        "seed_aggregate": seed_aggregate,
     }
+
+
+def _aggregate_model_seeds(
+    groups: Sequence[Mapping[str, Any]],
+    settings: JSCCSettings,
+) -> list[dict[str, Any]]:
+    metrics = ("normalized_residual_mse", "l1", "rmse", "velocity_l1")
+    aggregate: list[dict[str, Any]] = []
+    prediction_l1 = next(
+        float(group["l1"]) for group in groups if group["condition"] == "prediction_only"
+    )
+    for condition in ("prediction_only", "full_residual_oracle"):
+        group = next(item for item in groups if item["condition"] == condition)
+        aggregate.append(
+            {
+                "condition": condition,
+                "channel_uses": None,
+                "snr_db": None,
+                "model_seed_count": 0,
+                "improves_prediction_only_l1": float(group["l1"]) < prediction_l1,
+                **{
+                    f"{metric}_{suffix}": float(group[metric]) if suffix == "mean" else 0.0
+                    for metric in metrics
+                    for suffix in ("mean", "std")
+                },
+            }
+        )
+    for channel_uses in settings.channel_uses:
+        for condition, snr_values in (
+            ("noiseless_autoencoder", (None,)),
+            ("jscc_awgn", settings.test_snr_db),
+        ):
+            for snr_db in snr_values:
+                members = [
+                    group
+                    for group in groups
+                    if group["condition"] == condition
+                    and group["channel_uses"] == channel_uses
+                    and group["snr_db"] == snr_db
+                ]
+                if len(members) != len(settings.seeds):
+                    raise ValueError(
+                        f"expected {len(settings.seeds)} model seeds for "
+                        f"{condition}, C={channel_uses}, SNR={snr_db}"
+                    )
+                row: dict[str, Any] = {
+                    "condition": condition,
+                    "channel_uses": channel_uses,
+                    "real_degrees_of_freedom": 2 * channel_uses,
+                    "semantic_compression_ratio": channel_uses / 18.0,
+                    "snr_db": snr_db,
+                    "model_seed_count": len(members),
+                }
+                for metric in metrics:
+                    values = [float(member[metric]) for member in members]
+                    row[f"{metric}_mean"] = float(np.mean(values))
+                    row[f"{metric}_std"] = float(np.std(values))
+                row["improves_prediction_only_l1"] = row["l1_mean"] < prediction_l1
+                aggregate.append(row)
+    return aggregate
 
 
 def _load_or_prepare_examples(
@@ -753,6 +849,11 @@ def _atomic_write_jsonl(path: Path, rows: Sequence[Mapping[str, Any]]) -> None:
     os.replace(temporary, path)
 
 
+def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+    with path.open(encoding="utf-8") as handle:
+        return [json.loads(line) for line in handle if line.strip()]
+
+
 def _write_training_summary_csv(path: Path, rows: Sequence[Mapping[str, Any]]) -> None:
     _write_csv(
         path,
@@ -780,15 +881,74 @@ def _write_evaluation_summary_csv(
         (
             "condition",
             "channel_uses",
-            "model_seed",
+            "real_degrees_of_freedom",
+            "semantic_compression_ratio",
             "snr_db",
-            "sample_noise_realization_count",
-            "normalized_residual_mse",
-            "l1",
-            "rmse",
-            "velocity_l1",
+            "model_seed_count",
+            "normalized_residual_mse_mean",
+            "normalized_residual_mse_std",
+            "l1_mean",
+            "l1_std",
+            "rmse_mean",
+            "rmse_std",
+            "velocity_l1_mean",
+            "velocity_l1_std",
+            "improves_prediction_only_l1",
         ),
     )
+
+
+def _write_snr_plots(path: Path, summary: Mapping[str, Any]) -> None:
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return
+    aggregate = summary["seed_aggregate"]
+    prediction = next(row for row in aggregate if row["condition"] == "prediction_only")
+    path.mkdir(parents=True, exist_ok=True)
+    for metric, ylabel, filename in (
+        ("l1", "Raw motion L1", "motion_l1_vs_snr.png"),
+        ("velocity_l1", "Raw motion velocity L1", "velocity_l1_vs_snr.png"),
+        (
+            "normalized_residual_mse",
+            "Normalized residual MSE",
+            "residual_mse_vs_snr.png",
+        ),
+    ):
+        figure, axis = plt.subplots(figsize=(8, 5))
+        axis.axhline(
+            float(prediction[f"{metric}_mean"]),
+            color="black",
+            linestyle="--",
+            label="prediction only",
+        )
+        for channel_uses in sorted(
+            {int(row["channel_uses"]) for row in aggregate if row["condition"] == "jscc_awgn"}
+        ):
+            rows = sorted(
+                (
+                    row
+                    for row in aggregate
+                    if row["condition"] == "jscc_awgn" and row["channel_uses"] == channel_uses
+                ),
+                key=lambda row: float(row["snr_db"]),
+            )
+            axis.errorbar(
+                [row["snr_db"] for row in rows],
+                [row[f"{metric}_mean"] for row in rows],
+                yerr=[row[f"{metric}_std"] for row in rows],
+                marker="o",
+                capsize=3,
+                label=f"C={channel_uses}",
+            )
+        axis.set_xlabel("SNR (dB)")
+        axis.set_ylabel(ylabel)
+        axis.set_title(f"Sionna complex-AWGN residual JSCC: {ylabel}")
+        axis.grid(alpha=0.3)
+        axis.legend()
+        figure.tight_layout()
+        figure.savefig(path / filename, dpi=160)
+        plt.close(figure)
 
 
 def _write_csv(

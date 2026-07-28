@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from av_semcom.models.jscc.config import JSCCSettings
+from av_semcom.models.jscc.experiment import _summarize_test_rows
 from av_semcom.utils.config import ConfigError
 
 
@@ -53,3 +54,66 @@ def test_reference_backend_cannot_be_reported_as_formal() -> None:
 
     with pytest.raises(ConfigError, match="formal"):
         settings.require_formal_backend()
+
+
+def test_test_summary_aggregates_model_seeds_without_hiding_them() -> None:
+    config = _config()
+    config["channel"]["complex_channel_uses"] = [1]  # type: ignore[index]
+    config["jscc_evaluation"]["test_snr_db"] = [0.0]  # type: ignore[index]
+    settings = JSCCSettings.from_config(config)
+    common = {
+        "sample_id": "sample",
+        "speaker_id": "s7",
+        "split": "test",
+        "noise_seed": None,
+        "normalized_residual_mse": 1.0,
+        "rmse": 1.0,
+        "velocity_l1": 1.0,
+    }
+    rows = [
+        {
+            **common,
+            "condition": "prediction_only",
+            "channel_uses": None,
+            "model_seed": None,
+            "snr_db": None,
+            "l1": 1.0,
+        },
+        {
+            **common,
+            "condition": "full_residual_oracle",
+            "channel_uses": None,
+            "model_seed": None,
+            "snr_db": None,
+            "l1": 0.0,
+        },
+    ]
+    for seed, l1 in ((42, 0.6), (43, 0.8)):
+        rows.extend(
+            [
+                {
+                    **common,
+                    "condition": "noiseless_autoencoder",
+                    "channel_uses": 1,
+                    "model_seed": seed,
+                    "snr_db": None,
+                    "l1": l1 - 0.1,
+                },
+                {
+                    **common,
+                    "condition": "jscc_awgn",
+                    "channel_uses": 1,
+                    "model_seed": seed,
+                    "snr_db": 0.0,
+                    "l1": l1,
+                },
+            ]
+        )
+
+    summary = _summarize_test_rows(rows, settings)
+    awgn = next(row for row in summary["seed_aggregate"] if row["condition"] == "jscc_awgn")
+
+    assert summary["schema_version"] == 2
+    assert awgn["model_seed_count"] == 2
+    assert awgn["l1_mean"] == pytest.approx(0.7)
+    assert awgn["l1_std"] == pytest.approx(0.1)
