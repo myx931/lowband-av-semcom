@@ -104,5 +104,6 @@
 - 状态：validation-only 全局 SNR 安全门控和 4,882 参数 hard Top-K scorer
   均已完成。12 个模型、48,000 条 test 指标和匹配预算规则比较已验收；
   learned 只在紧预算 `K=2/4` 稳定优于原始幅值，`K=6/8` 未通过该比较。
-  下一步只在 train/validation 上做最小输入与损失消融，避免重复利用 `s7`
-  test 调参。
+  后续 validation-only 2×2 输入与损失消融也已完成：24 个模型、21,000 条
+  预留 audit 指标表明关闭 SNR 和速度损失仍不能使 K=6/8 超过原始幅值。
+  scorer 调参到此停止，`s7` test 不再复用。

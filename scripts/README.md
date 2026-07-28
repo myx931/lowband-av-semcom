@@ -121,3 +121,22 @@ PYTHONPATH=src "$SIONNA_PYTHON" scripts/eval/evaluate_residual_scorer.py \
 checkpoint 全部冻结后绑定。评价比较 dense、原始/归一化幅值、训练集固定位置、
 三个随机种子和三个 learned scorer，并要求 dense 复算与不可变 E5 指标精确
 一致。详细协议和真实结果见 `docs/RESIDUAL_SCORER_BASELINE.md`。
+
+K=6/8 的 SNR 输入与速度损失诊断使用独立 validation-only 命令：
+
+```bash
+PYTHONPATH=src "$SIONNA_PYTHON" \
+  scripts/train/train_residual_scorer_ablation.py \
+  --config configs/experiment/residual_jscc_ten_speaker.yaml \
+  --e5-run-dir outputs/residual_jscc/<timestamp>
+
+PYTHONPATH=src "$SIONNA_PYTHON" \
+  scripts/eval/evaluate_residual_scorer_ablation.py \
+  --config configs/experiment/residual_jscc_ten_speaker.yaml \
+  --e5-run-dir outputs/residual_jscc/<timestamp> \
+  --run-dir outputs/residual_scorer_validation_ablation/<timestamp>
+```
+
+训练和 audit 使用预先冻结且互不重叠的 validation 半区；即使 E5
+`test_metrics.jsonl` 不存在也能完成。完整协议见
+`docs/RESIDUAL_SCORER_VALIDATION_ABLATION.md`。

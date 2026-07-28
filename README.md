@@ -37,7 +37,10 @@ SNR 的速度抖动。E6 第二阶段已冻结 E5 并训练逐帧 hard Top-K 残
 12 个模型和 48,000 条 test 指标均完成。learned scorer 在紧预算
 `K=2/4` 下相对原始幅值规则平均降低 L1 `4.09%/3.36%`，但在 `K=6/8`
 下平均退化 `1.05%/3.07%`；dense JSCC 仍是全部可发送条件的上界。因此学习式
-选择只获得有限、预算相关的支持，后续消融必须限制在 train/validation。
+选择只获得有限、预算相关的支持。随后使用 `s3` validation 的预冻结 50/50
+calibration/audit 分区完成 24 模型、21,000 条记录的 2×2 消融；关闭 SNR 和
+速度损失后 K=6/8 仍比原始幅值差 0.35%/2.18%，排除了这两个开关作为主要原因，
+并停止继续使用已消费的 test 调整 scorer。
 
 研究路线：
 
@@ -101,6 +104,7 @@ outputs/{experiment_name}/{timestamp}/
 - [Sionna AWGN 与残差 JSCC 基线](docs/JSCC_BASELINE.md)
 - [Validation-only 信道安全门控](docs/CHANNEL_GATE_BASELINE.md)
 - [信道感知残差选择器基线](docs/RESIDUAL_SCORER_BASELINE.md)
+- [残差选择器 validation-only 消融](docs/RESIDUAL_SCORER_VALIDATION_ABLATION.md)
 - [第三方依赖说明](third_party/README.md)
 
 ## 研究边界
