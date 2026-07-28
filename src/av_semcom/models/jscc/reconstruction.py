@@ -418,12 +418,17 @@ def _summarize(
 
 
 def _write_plots(path: Path, summary: Mapping[str, Any]) -> None:
+    groups = summary["groups"]
+    prediction = next(
+        (group for group in groups if group["family"] == "prediction_only"),
+        None,
+    )
+    if prediction is None:
+        return
     try:
         import matplotlib.pyplot as plt
     except ImportError:
         return
-    groups = summary["groups"]
-    prediction = next(group for group in groups if group["family"] == "prediction_only")
     path.mkdir(parents=True, exist_ok=True)
     for metric, label, filename in (
         ("oracle_mouth_mae", "Oracle-relative mouth ROI MAE", "mouth_mae_vs_snr.png"),
