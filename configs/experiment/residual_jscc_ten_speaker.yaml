@@ -151,3 +151,14 @@ residual_scorer_ablation:
     no_snr_no_velocity:
       use_snr: false
       velocity_weight: 0.0
+
+communication_report:
+  output_dir: outputs/communication_report
+  frame_rate: 25
+  frame_count: 75
+  reference_frame_count: 1
+  motion_dimension: 18
+  methods: [dense_jscc, raw_magnitude, learned_scorer]
+  digital_bitrate_defined: false
+  include_audio_side_information_cost: false
+  include_reference_face_cost: false

@@ -107,3 +107,15 @@
   后续 validation-only 2×2 输入与损失消融也已完成：24 个模型、21,000 条
   预留 audit 指标表明关闭 SNR 和速度损失仍不能使 K=6/8 超过原始幅值。
   scorer 调参到此停止，`s7` test 不再复用。
+
+## 11. Compare full motion with prediction-residual JSCC
+
+- 研究目标：在相同复信道符号预算下直接检验完整 18 维运动与预测残差的
+  率—质量差异。
+- 输入：冻结十说话人 E3 预测、完整运动、E5 residual JSCC 和相同 Sionna
+  AWGN 条件。
+- 输出：只新增 12 个完整运动 JSCC 模型、匹配预算运动/视频指标和配对比较。
+- 验收标准：模型、`C`、SNR、样本和噪声条件匹配；模型选择与门控仅用
+  validation；test 只在冻结后评价。
+- 暂不包含：重新训练 residual 模型、继续调 scorer、数字 bitstream、OFDM、
+  LDPC 或衰落信道。

@@ -40,7 +40,10 @@ SNR 的速度抖动。E6 第二阶段已冻结 E5 并训练逐帧 hard Top-K 残
 选择只获得有限、预算相关的支持。随后使用 `s3` validation 的预冻结 50/50
 calibration/audit 分区完成 24 模型、21,000 条记录的 2×2 消融；关闭 SNR 和
 速度损失后 K=6/8 仍比原始幅值差 0.35%/2.18%，排除了这两个开关作为主要原因，
-并停止继续使用已消费的 test 调整 scorer。
+并停止继续使用已消费的 test 调整 scorer。冻结通信代价报告进一步确认：
+`C=1/2/3/4` 对应每段 `74/148/222/296` 个复符号；hard Top-K 并未降低同一
+`C` 的实际符号数，且 24 个可发送 sparse 点全部被同速率 dense residual JSCC
+支配。下一项关键实验是完整 18 维运动与预测残差在匹配复符号预算下的公平对照。
 
 研究路线：
 
@@ -105,6 +108,8 @@ outputs/{experiment_name}/{timestamp}/
 - [Validation-only 信道安全门控](docs/CHANNEL_GATE_BASELINE.md)
 - [信道感知残差选择器基线](docs/RESIDUAL_SCORER_BASELINE.md)
 - [残差选择器 validation-only 消融](docs/RESIDUAL_SCORER_VALIDATION_ABLATION.md)
+- [通信代价与率—质量报告](docs/COMMUNICATION_RATE_QUALITY.md)
+- [项目进展与实验归档](docs/PROJECT_PROGRESS_ARCHIVE.md)
 - [第三方依赖说明](third_party/README.md)
 
 ## 研究边界
