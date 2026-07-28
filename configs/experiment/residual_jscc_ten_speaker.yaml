@@ -94,3 +94,10 @@ jscc_evaluation:
   validation_snr_db: [2.5, 7.5]
   test_snr_db: [-5.0, 0.0, 5.0, 10.0]
   noise_seeds: [42, 43, 44]
+
+jscc_reconstruction:
+  split: test
+  noise_seed: 42
+  metric_workers: 8
+  media_channel_uses: 4
+  save_representative_media: true

@@ -72,6 +72,17 @@ PYTHONPATH=src "$SIONNA_PYTHON" scripts/eval/evaluate_residual_jscc.py \
 PYTHONPATH=src "$SIONNA_PYTHON" scripts/eval/report_residual_jscc.py \
   --config configs/experiment/residual_jscc_ten_speaker.yaml \
   --run-dir outputs/residual_jscc/<timestamp>
+
+PYTHONPATH=src "$SIONNA_PYTHON" \
+  scripts/eval/export_residual_jscc_reconstruction.py \
+  --config configs/experiment/residual_jscc_ten_speaker.yaml \
+  --run-dir outputs/residual_jscc/<timestamp>
+
+# 切换到 LivePortrait Python 3.10 环境后：
+PYTHONPATH=src python scripts/eval/reconstruct_residual_jscc.py \
+  --config configs/experiment/residual_jscc_ten_speaker.yaml \
+  --run-dir outputs/residual_jscc/<timestamp> \
+  --resume --reconstruction-batch-size 48 --metric-workers 8
 ```
 
 正式配置必须使用 `channel.backend: sionna`。`C` 表示每个有效非参考帧的复数

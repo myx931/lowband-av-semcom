@@ -123,3 +123,42 @@ JSCC 的三种子、三噪声种子聚合结果如下：
 `0.001006`，在 10 dB 才回落到 `0.000658`。也就是说逐帧 MSE 能降低位置误差，
 但中低 SNR 会引入抖动。当前结果只完成运动空间 E5 验证，尚未完成代表条件的
 LivePortrait 视频重建，不能据此宣称视频感知质量提升。
+
+## 冻结视频评价协议
+
+视频评价不再根据 test 选择模型。每个信道预算只使用 validation 归一化残差
+MSE 最低的模型种子：
+
+| C | 选择种子 |
+|---:|---:|
+| 1 | 43 |
+| 2 | 44 |
+| 3 | 43 |
+| 4 | 44 |
+
+test 的信道噪声种子固定为 42。每条 s7 test 样本共重建 22 个条件：纯预测、
+完整残差 oracle、每个 `C` 的无噪 autoencoder，以及每个 `C` 在
+`-5/0/5/10 dB` 下的带噪结果。视频指标只代表这一条预先固定的噪声实现；运动
+空间报告仍以三个噪声种子聚合为主。
+
+由于 Sionna 与 LivePortrait 使用不同依赖环境，先在 Sionna 环境导出运动候选：
+
+```bash
+PYTHONPATH=src "$SIONNA_PYTHON" \
+  scripts/eval/export_residual_jscc_reconstruction.py \
+  --config configs/experiment/residual_jscc_ten_speaker.yaml \
+  --run-dir outputs/residual_jscc/<e5-timestamp>
+```
+
+导出器逐样本核对候选运动指标与已冻结的 `test_metrics.jsonl`；任何不一致都会
+失败。随后切换到 LivePortrait Python 3.10 环境：
+
+```bash
+PYTHONPATH=src python scripts/eval/reconstruct_residual_jscc.py \
+  --config configs/experiment/residual_jscc_ten_speaker.yaml \
+  --run-dir outputs/residual_jscc/<e5-timestamp> \
+  --resume --reconstruction-batch-size 48 --metric-workers 8
+```
+
+全量指标覆盖 100 条 test 样本和全部 22 个条件。只为排序首、中、末三条样本保存
+媒体；媒体包含纯预测以及 `C=4` 的无噪和四个 SNR 条件，避免保存 2,200 个视频。

@@ -102,7 +102,7 @@ class JSCCSettings:
             validation_snr_db=validation_snr,
             test_snr_db=test_snr,
             noise_seeds=noise_seeds,
-            config=config,
+            config={key: value for key, value in config.items() if key != "jscc_reconstruction"},
         )
 
     def require_formal_backend(self) -> None:
@@ -110,6 +110,48 @@ class JSCCSettings:
 
         if self.channel_backend != "sionna":
             raise ConfigError("formal E5 runs require channel.backend=sionna")
+
+
+@dataclass(frozen=True)
+class JSCCReconstructionSettings:
+    """Frozen subset of E5 conditions used for video reconstruction."""
+
+    split: str
+    noise_seed: int
+    metric_workers: int
+    media_channel_uses: int
+    save_representative_media: bool
+
+    @classmethod
+    def from_config(
+        cls,
+        config: Mapping[str, Any],
+        jscc: JSCCSettings,
+    ) -> JSCCReconstructionSettings:
+        """Validate that video evaluation cannot silently tune on test."""
+
+        reconstruction = _mapping(config, "jscc_reconstruction")
+        split = str(reconstruction.get("split", "test"))
+        if split != "test":
+            raise ConfigError("jscc_reconstruction.split must be test")
+        noise_seed = int(reconstruction.get("noise_seed", 42))
+        if noise_seed not in jscc.noise_seeds:
+            raise ConfigError("jscc_reconstruction.noise_seed must be an evaluation noise seed")
+        media_channel_uses = int(reconstruction.get("media_channel_uses", max(jscc.channel_uses)))
+        if media_channel_uses not in jscc.channel_uses:
+            raise ConfigError(
+                "jscc_reconstruction.media_channel_uses must be a configured channel use"
+            )
+        metric_workers = int(reconstruction.get("metric_workers", 4))
+        if metric_workers < 1:
+            raise ConfigError("jscc_reconstruction.metric_workers must be positive")
+        return cls(
+            split=split,
+            noise_seed=noise_seed,
+            metric_workers=metric_workers,
+            media_channel_uses=media_channel_uses,
+            save_representative_media=bool(reconstruction.get("save_representative_media", True)),
+        )
 
 
 def _mapping(config: Mapping[str, Any], key: str) -> Mapping[str, Any]:
