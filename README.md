@@ -43,7 +43,12 @@ calibration/audit 分区完成 24 模型、21,000 条记录的 2×2 消融；关
 并停止继续使用已消费的 test 调整 scorer。冻结通信代价报告进一步确认：
 `C=1/2/3/4` 对应每段 `74/148/222/296` 个复符号；hard Top-K 并未降低同一
 `C` 的实际符号数，且 24 个可发送 sparse 点全部被同速率 dense residual JSCC
-支配。下一项关键实验是完整 18 维运动与预测残差在匹配复符号预算下的公平对照。
+支配。E7 随后完成完整 18 维运动与预测残差在匹配复符号预算下的公平对照：
+12 个 full-motion 模型、15,800 条运动指标及 100 条样本的 1,700 条视频指标
+均完成，失败数为 0。冻结比较中 residual 在运动 L1 的 16 个组中胜出 14 组，
+在嘴部 NME 中胜出 13 组；优势集中在低/中 SNR 和紧预算，高 SNR、大预算时
+完整运动会追平或局部胜出。核心仿真 E0–E7 已闭环，下一步转入论文主表、图和
+统计归档，不再为小数点改善重复训练既有模型。
 
 研究路线：
 
@@ -94,6 +99,7 @@ outputs/{experiment_name}/{timestamp}/
 
 ## 文档导航
 
+- [课题实验全景说明书（推荐先读）](docs/THESIS_EXPERIMENT_GUIDE_CN.md)
 - [项目规范](docs/PROJECT_SPEC.md)
 - [研究问题](docs/RESEARCH_QUESTIONS.md)
 - [实验计划](docs/EXPERIMENT_PLAN.md)
@@ -109,6 +115,7 @@ outputs/{experiment_name}/{timestamp}/
 - [信道感知残差选择器基线](docs/RESIDUAL_SCORER_BASELINE.md)
 - [残差选择器 validation-only 消融](docs/RESIDUAL_SCORER_VALIDATION_ABLATION.md)
 - [通信代价与率—质量报告](docs/COMMUNICATION_RATE_QUALITY.md)
+- [完整运动与预测残差匹配 JSCC 对照](docs/FULL_MOTION_JSCC_CONTROL.md)
 - [项目进展与实验归档](docs/PROJECT_PROGRESS_ARCHIVE.md)
 - [第三方依赖说明](third_party/README.md)
 

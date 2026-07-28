@@ -112,6 +112,7 @@ class JSCCSettings:
                     "residual_scorer",
                     "residual_scorer_ablation",
                     "communication_report",
+                    "full_motion_jscc",
                 }
             },
         )
