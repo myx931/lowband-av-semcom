@@ -1,0 +1,6 @@
+# Dedicated E5 JSCC environment. Do not install into the MediaPipe/LivePortrait envs.
+numpy==2.2.6
+torch==2.9.1
+sionna-no-rt==2.0.1
+PyYAML>=6.0,<7
+pytest>=8.0,<9

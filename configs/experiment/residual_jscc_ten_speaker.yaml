@@ -1,0 +1,103 @@
+data:
+  dataset: grid
+  root: null
+  raw_video_dir: grid/raw/video
+  raw_audio_dir: grid/raw/audio_synced_10spk
+  manifest_path: grid/manifests/grid_ten_speaker.jsonl
+  failure_dir: grid/manifests/failures_ten_speaker
+  processed_dir: grid/processed/ten_speaker
+  speakers: [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10]
+  max_samples: 100
+  split_seed: 42
+  validation_ratio: 0.1
+  test_ratio: 0.1
+  fps: 25
+  audio_sample_rate: 16000
+  image_size: 256
+  resume: true
+
+motion:
+  backend: liveportrait
+  backend_revision: 9b294b3d0536135442ea73cb01e6cb3ca7029dd3
+  repository: third_party/LivePortrait
+  model_root_env: MODEL_ROOT
+  output_dir: grid/processed/ten_speaker/motion/liveportrait
+  device: cuda:0
+  half_precision: true
+  stitching: true
+  reconstruction_batch_size: 48
+  stats_filename: train_stats.json
+  stats_split: train
+  stats_scope: train_stats
+
+model:
+  name: audio_motion_gru
+  mel_bins: 80
+  mel_steps_per_frame: 4
+  audio_projection_dim: 128
+  hidden_dim: 256
+  num_layers: 2
+  dropout: 0.1
+  output_dim: 18
+  bidirectional: false
+
+training:
+  seeds: [42, 43, 44]
+  device: cuda:0
+  batch_size: 16
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  max_epochs: 100
+  early_stopping_patience: 15
+  early_stopping_min_delta: 0.0001
+  gradient_clip_norm: 1.0
+  num_workers: 2
+  mixed_precision: true
+  deterministic: true
+
+evaluation:
+  output_dir: outputs/audio_to_motion_ten_speaker
+  splits: [validation, test]
+  baselines: [zero_motion, train_mean, oracle_persistence]
+
+channel:
+  backend: sionna
+  library: sionna-no-rt
+  library_version: 2.0.1
+  complex_channel_uses: [1, 2, 3, 4]
+  target_power: 1.0
+  model: complex_awgn
+  noise_power_convention: N0_per_complex_dimension
+
+jscc_model:
+  name: residual_mlp_jscc
+  input_dim: 18
+  hidden_dim: 64
+
+jscc_training:
+  seeds: [42, 43, 44]
+  device: cuda:0
+  batch_size: 16
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  max_epochs: 100
+  early_stopping_patience: 15
+  early_stopping_min_delta: 0.0001
+  gradient_clip_norm: 1.0
+  num_workers: 2
+  deterministic: true
+  snr_min_db: 0.0
+  snr_max_db: 10.0
+
+jscc_evaluation:
+  output_dir: outputs/residual_jscc
+  validation_snr_db: [2.5, 7.5]
+  test_snr_db: [-5.0, 0.0, 5.0, 10.0]
+  noise_seeds: [42, 43, 44]
+
+jscc_reconstruction:
+  split: test
+  noise_seed: 42
+  metric_workers: 8
+  media_channel_uses: 4
+  save_representative_media: true
