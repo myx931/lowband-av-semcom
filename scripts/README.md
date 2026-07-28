@@ -56,3 +56,19 @@ PYTHONPATH=src python scripts/eval/reconstruct_prediction_residuals.py \
 十说话人运行应产生 200 个样本文件和 4,600 条重建指标，完成标记中的
 `sample_count/result_count` 应为 `200/4600`，失败数应为 0；匹配完成标记的
 `--resume` 不得改写已有产物。
+
+E5 在独立 Python 3.11 Sionna 环境中训练和评价复数 AWGN 残差 JSCC：
+
+```bash
+PYTHONPATH=src "$SIONNA_PYTHON" scripts/train/train_residual_jscc.py \
+  --config configs/experiment/residual_jscc_ten_speaker.yaml \
+  --e3-run-dir outputs/audio_to_motion_ten_speaker/<timestamp>
+
+PYTHONPATH=src "$SIONNA_PYTHON" scripts/eval/evaluate_residual_jscc.py \
+  --config configs/experiment/residual_jscc_ten_speaker.yaml \
+  --e3-run-dir outputs/audio_to_motion_ten_speaker/<timestamp> \
+  --run-dir outputs/residual_jscc/<timestamp>
+```
+
+正式配置必须使用 `channel.backend: sionna`。`C` 表示每个有效非参考帧的复数
+信道符号数，不是比特率；详细冻结协议见 `docs/JSCC_BASELINE.md`。

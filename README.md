@@ -22,7 +22,9 @@ LivePortrait 残差重建也已完成 200 条样本、4,600 条指标，失败�
 上原始幅度 Top-K 在每帧仅保留 4/18 个残差值时，将相对 lip-only oracle 的
 嘴部 ROI MAE 从纯预测的 `5.299` 降至 `2.100`，NME 从 `0.02195` 降至
 `0.00789`。该结果证明真实残差存在可利用的稀疏上界，但发送端选择器、量化、
-AWGN 和 JSCC 尚未开始。
+AWGN 和 JSCC 尚未得到实验支持。E5 已开始实现：正式信道固定使用 Sionna PHY
+2.0.1 的复数 AWGN，小型 MLP 将 18 维归一化残差映射到每帧 `1/2/3/4` 个复数
+信道符号；真实 GPU 训练和 test 评价尚未完成。
 
 研究路线：
 
@@ -83,6 +85,7 @@ outputs/{experiment_name}/{timestamp}/
 - [运动与重建基线](docs/MOTION_BASELINE.md)
 - [音频到运动基线](docs/AUDIO_MOTION_BASELINE.md)
 - [预测残差基线](docs/RESIDUAL_BASELINE.md)
+- [Sionna AWGN 与残差 JSCC 基线](docs/JSCC_BASELINE.md)
 - [第三方依赖说明](third_party/README.md)
 
 ## 研究边界
