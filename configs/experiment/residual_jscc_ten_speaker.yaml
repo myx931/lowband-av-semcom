@@ -167,3 +167,12 @@ full_motion_jscc:
   output_dir: outputs/full_motion_jscc
   comparison_output_dir: outputs/full_motion_vs_residual
   representation: train_standardized_full_18d_motion
+
+thesis_evidence:
+  output_dir: outputs/thesis_evidence
+  bootstrap_seed: 42
+  bootstrap_resamples: 10000
+  confidence_level: 0.95
+  expected_test_sample_count: 100
+  qualitative_positions: [0, 50, 99]
+  figure_dpi: 180

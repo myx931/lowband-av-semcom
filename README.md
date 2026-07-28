@@ -47,8 +47,10 @@ calibration/audit 分区完成 24 模型、21,000 条记录的 2×2 消融；关
 12 个 full-motion 模型、15,800 条运动指标及 100 条样本的 1,700 条视频指标
 均完成，失败数为 0。冻结比较中 residual 在运动 L1 的 16 个组中胜出 14 组，
 在嘴部 NME 中胜出 13 组；优势集中在低/中 SNR 和紧预算，高 SNR、大预算时
-完整运动会追平或局部胜出。核心仿真 E0–E7 已闭环，下一步转入论文主表、图和
-统计归档，不再为小数点改善重复训练既有模型。
+完整运动会追平或局部胜出。E8 已进一步从冻结 E3–E7 只读生成论文证据包：
+16 行主表、80 行逐样本 bootstrap 汇总和 7 张图。运动
+L1 的 95% 点态区间支持 residual/full-motion/跨零的条件数为 11/1/4，嘴部
+NME 为 12/1/3。核心仿真与证据归档 E0–E8 已闭环，当前进入论文成稿阶段。
 
 研究路线：
 
@@ -101,6 +103,8 @@ outputs/{experiment_name}/{timestamp}/
 
 - [课题实验全景说明书（推荐先读）](docs/THESIS_EXPERIMENT_GUIDE_CN.md)
 - [论文曲线、数据与结论速查](docs/user_notes/THESIS_RESULTS_CHEATSHEET_CN.md)
+- [E8 冻结论文证据包](docs/THESIS_EVIDENCE_PACK.md)
+- [中文实验结果章节草案](docs/THESIS_RESULTS_CHAPTER_DRAFT_CN.md)
 - [项目规范](docs/PROJECT_SPEC.md)
 - [研究问题](docs/RESEARCH_QUESTIONS.md)
 - [实验计划](docs/EXPERIMENT_PLAN.md)
