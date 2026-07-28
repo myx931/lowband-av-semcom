@@ -105,7 +105,12 @@ class JSCCSettings:
             config={
                 key: value
                 for key, value in config.items()
-                if key not in {"jscc_reconstruction", "channel_gate"}
+                if key
+                not in {
+                    "jscc_reconstruction",
+                    "channel_gate",
+                    "residual_scorer",
+                }
             },
         )
 

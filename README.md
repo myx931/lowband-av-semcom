@@ -33,7 +33,11 @@ AWGN，小型 MLP 将 18 维归一化残差映射到每帧 `1/2/3/4` 个复数�
 在错开的 15 个 SNR 上冻结全局安全门控，四个预算的阈值均为 `-1.5 dB`。门控
 在 `s7` test 的 -5 dB 回退到纯预测，消除了始终发送造成的 4.3%–20.7% 位置
 L1 退化，同时保留 0/5/10 dB 收益。该门控尚未选择残差元素，也未解决中等
-SNR 的速度抖动。
+SNR 的速度抖动。E6 第二阶段已冻结 E5 并训练逐帧 hard Top-K 残差 scorer：
+12 个模型和 48,000 条 test 指标均完成。learned scorer 在紧预算
+`K=2/4` 下相对原始幅值规则平均降低 L1 `4.09%/3.36%`，但在 `K=6/8`
+下平均退化 `1.05%/3.07%`；dense JSCC 仍是全部可发送条件的上界。因此学习式
+选择只获得有限、预算相关的支持，后续消融必须限制在 train/validation。
 
 研究路线：
 
@@ -96,6 +100,7 @@ outputs/{experiment_name}/{timestamp}/
 - [预测残差基线](docs/RESIDUAL_BASELINE.md)
 - [Sionna AWGN 与残差 JSCC 基线](docs/JSCC_BASELINE.md)
 - [Validation-only 信道安全门控](docs/CHANNEL_GATE_BASELINE.md)
+- [信道感知残差选择器基线](docs/RESIDUAL_SCORER_BASELINE.md)
 - [第三方依赖说明](third_party/README.md)
 
 ## 研究边界

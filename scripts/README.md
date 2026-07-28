@@ -100,3 +100,24 @@ PYTHONPATH=src "$SIONNA_PYTHON" scripts/eval/evaluate_channel_gate.py \
 校准网格必须与 E5 test SNR 错开。策略落盘前不得读取 test 数值；`--resume`
 需要同时提供打印出的 `--run-dir`，并拒绝来源哈希或配置不匹配。详细协议见
 `docs/CHANNEL_GATE_BASELINE.md`。
+
+门控冻结后，在同一 Python 3.11 Sionna 环境训练和评价 hard Top-K 残差
+scorer：
+
+```bash
+PYTHONPATH=src "$SIONNA_PYTHON" scripts/train/train_residual_scorer.py \
+  --config configs/experiment/residual_jscc_ten_speaker.yaml \
+  --e5-run-dir outputs/residual_jscc/<timestamp> \
+  --gate-run-dir outputs/channel_gate/<timestamp>
+
+PYTHONPATH=src "$SIONNA_PYTHON" scripts/eval/evaluate_residual_scorer.py \
+  --config configs/experiment/residual_jscc_ten_speaker.yaml \
+  --e5-run-dir outputs/residual_jscc/<timestamp> \
+  --gate-run-dir outputs/channel_gate/<timestamp> \
+  --run-dir outputs/residual_scorer/<timestamp>
+```
+
+训练只读取 E5 的 train/validation 残差缓存；test 指标哈希只在 scorer
+checkpoint 全部冻结后绑定。评价比较 dense、原始/归一化幅值、训练集固定位置、
+三个随机种子和三个 learned scorer，并要求 dense 复算与不可变 E5 指标精确
+一致。详细协议和真实结果见 `docs/RESIDUAL_SCORER_BASELINE.md`。
