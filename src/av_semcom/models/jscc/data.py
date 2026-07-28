@@ -116,6 +116,7 @@ class ResidualDataset(Dataset[dict[str, torch.Tensor | str]]):
             "split": example.split,
             "residual": torch.from_numpy(example.normalized_residual),
             "mask": torch.from_numpy(example.transmission_mask),
+            "valid_mask": torch.from_numpy(example.valid_mask),
         }
 
 

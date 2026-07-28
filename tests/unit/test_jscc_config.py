@@ -42,10 +42,12 @@ def test_jscc_settings_distinguish_complex_uses_from_real_dof() -> None:
 def test_e6_gate_config_does_not_change_e5_fingerprint_surface() -> None:
     config = _config()
     config["channel_gate"] = {"validation_snr_db": [-0.5]}
+    config["residual_scorer"] = {"budgets_by_channel_use": {1: 2}}
 
     settings = JSCCSettings.from_config(config)
 
     assert "channel_gate" not in settings.config
+    assert "residual_scorer" not in settings.config
 
 
 def test_jscc_settings_reject_validation_test_snr_leakage() -> None:
