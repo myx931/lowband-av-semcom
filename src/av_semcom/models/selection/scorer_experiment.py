@@ -442,6 +442,7 @@ def _train_one_scorer(
                         "hidden_dim": settings.hidden_dim,
                         "temperature": settings.temperature,
                         "max_channel_uses": max(settings.budgets),
+                        "use_snr": True,
                     },
                     "model_state": scorer.state_dict(),
                 },
@@ -475,11 +476,13 @@ def _train_epoch(
     k: int,
     device: torch.device,
     snr_generator: torch.Generator,
+    *,
+    noise_seed_base: int | None = None,
 ) -> dict[str, float]:
     scorer.train()
     totals = np.zeros(3, dtype=np.float64)
     count = 0
-    for batch in loader:
+    for batch_index, batch in enumerate(loader):
         residual = batch["residual"].to(device)
         mask = batch["mask"].to(device)
         valid_mask = batch["valid_mask"].to(device)
@@ -500,7 +503,15 @@ def _train_epoch(
             k=k,
             channel_uses=channel_uses,
         ).selected_residual
-        decoded = frozen_jscc(selected, mask, snr).decoded_residual
+        noise_seed = (
+            None if noise_seed_base is None else (noise_seed_base + batch_index) % (2**31 - 1)
+        )
+        decoded = frozen_jscc(
+            selected,
+            mask,
+            snr,
+            noise_seed=noise_seed,
+        ).decoded_residual
         loss = raw_position_velocity_loss(
             decoded,
             residual,
@@ -885,9 +896,10 @@ def _load_scorer(
     )
     scorer = ChannelAwareResidualScorer(
         motion_std=torch.from_numpy(np.asarray(motion_std, dtype=np.float32)),
-        hidden_dim=settings.hidden_dim,
-        temperature=settings.temperature,
-        max_channel_uses=max(settings.budgets),
+        hidden_dim=int(checkpoint["model_config"]["hidden_dim"]),
+        temperature=float(checkpoint["model_config"]["temperature"]),
+        max_channel_uses=int(checkpoint["model_config"]["max_channel_uses"]),
+        use_snr=bool(checkpoint["model_config"].get("use_snr", True)),
     ).to(device)
     scorer.load_state_dict(checkpoint["model_state"])
     scorer.eval()

@@ -20,8 +20,15 @@ from av_semcom.models.motion.perturbations import (
     save_motion_normalizer,
 )
 from av_semcom.models.predictor.artifacts import atomic_save_checkpoint
-from av_semcom.models.selection.config import ResidualScorerSettings
+from av_semcom.models.selection.config import (
+    ResidualScorerAblationSettings,
+    ResidualScorerSettings,
+)
 from av_semcom.models.selection.gate import GatePolicy
+from av_semcom.models.selection.scorer_ablation import (
+    run_scorer_ablation_evaluation,
+    run_scorer_ablation_training,
+)
 from av_semcom.models.selection.scorer_experiment import (
     run_scorer_evaluation,
     run_scorer_training,
@@ -72,6 +79,21 @@ def _config(tmp_path: Path) -> dict[str, Any]:
             "validation_snr_db": [2.5],
             "noise_seeds": [42],
             "random_seeds": [42],
+        },
+        "residual_scorer_ablation": {
+            "output_dir": str(tmp_path / "scorer-ablation-output"),
+            "channel_uses": [1],
+            "calibration_sample_count": 1,
+            "partition_salt": "smoke",
+            "variants": {
+                "full": {"use_snr": True, "velocity_weight": 0.5},
+                "no_snr": {"use_snr": False, "velocity_weight": 0.5},
+                "no_velocity": {"use_snr": True, "velocity_weight": 0.0},
+                "no_snr_no_velocity": {
+                    "use_snr": False,
+                    "velocity_weight": 0.0,
+                },
+            },
         },
     }
 
@@ -258,3 +280,60 @@ def test_residual_scorer_train_evaluate_and_resume(tmp_path: Path) -> None:
     assert summary["result_count"] == 12
     assert summary["maximum_dense_metric_difference"] == pytest.approx(0.0)
     assert (run_dir / "evaluation_complete.json").stat().st_mtime_ns == mtime
+
+    (e5 / "test_metrics.jsonl").unlink()
+    ablation = ResidualScorerAblationSettings.from_config(
+        config,
+        jscc,
+        scorer_settings,
+    )
+    ablation_dir = tmp_path / "scorer-ablation-run"
+    ablation_output, ablation_training = run_scorer_ablation_training(
+        ablation,
+        scorer_settings,
+        jscc,
+        predictor,  # type: ignore[arg-type]
+        e5,
+        run_directory=ablation_dir,
+        formal=False,
+    )
+    ablation_summary = run_scorer_ablation_evaluation(
+        ablation,
+        scorer_settings,
+        jscc,
+        predictor,  # type: ignore[arg-type]
+        e5,
+        ablation_dir,
+        formal=False,
+    )
+    ablation_mtime = (ablation_dir / "audit_complete.json").stat().st_mtime_ns
+    _, ablation_training_resumed = run_scorer_ablation_training(
+        ablation,
+        scorer_settings,
+        jscc,
+        predictor,  # type: ignore[arg-type]
+        e5,
+        run_directory=ablation_dir,
+        resume=True,
+        formal=False,
+    )
+    ablation_summary_resumed = run_scorer_ablation_evaluation(
+        ablation,
+        scorer_settings,
+        jscc,
+        predictor,  # type: ignore[arg-type]
+        e5,
+        ablation_dir,
+        resume=True,
+        formal=False,
+    )
+
+    assert ablation_output == ablation_dir
+    assert ablation_training["model_count"] == 4
+    assert ablation_training_resumed == ablation_training
+    assert ablation_training["test_data_accessed"] is False
+    assert ablation_summary["result_count"] == 6
+    assert ablation_summary_resumed == ablation_summary
+    assert ablation_summary["test_data_accessed"] is False
+    assert (ablation_dir / "audit_complete.json").stat().st_mtime_ns == ablation_mtime
+    assert not (e5 / "test_metrics.jsonl").exists()

@@ -110,6 +110,7 @@ class JSCCSettings:
                     "jscc_reconstruction",
                     "channel_gate",
                     "residual_scorer",
+                    "residual_scorer_ablation",
                 }
             },
         )
