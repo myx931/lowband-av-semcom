@@ -5,9 +5,10 @@ from __future__ import annotations
 import importlib
 import subprocess
 import sys
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, Protocol
+from typing import Any, Literal, Protocol
 
 import numpy as np
 
@@ -50,6 +51,14 @@ class ReconstructionBackend(Protocol):
         lip_vector: np.ndarray | None = None,
     ) -> np.ndarray:
         """Render RGB frames from a reference face and motion."""
+
+    def reconstruct_lip_vectors(
+        self,
+        source_frame: np.ndarray,
+        sequence: MotionSequence,
+        lip_vectors: Sequence[np.ndarray],
+    ) -> list[np.ndarray]:
+        """Render several lip-only candidates while reusing source context."""
 
     def close(self) -> None:
         """Release backend resources."""
@@ -133,6 +142,24 @@ class FakeReconstructionBackend:
 
     def close(self) -> None:
         return None
+
+    def reconstruct_lip_vectors(
+        self,
+        source_frame: np.ndarray,
+        sequence: MotionSequence,
+        lip_vectors: Sequence[np.ndarray],
+    ) -> list[np.ndarray]:
+        """Render several fake candidates."""
+
+        return [
+            self.reconstruct(
+                source_frame,
+                sequence,
+                mode="lip_only",
+                lip_vector=lip_vector,
+            )
+            for lip_vector in lip_vectors
+        ]
 
 
 @dataclass(frozen=True)
@@ -269,20 +296,87 @@ class LivePortraitBackend:
         if sequence.backend_revision != self.revision:
             raise ValueError("motion artifact was extracted with another backend revision")
 
-        import torch
-
-        source = self._wrapper.prepare_source(source_frame)
-        source_info = self._wrapper.get_kp_info(source)
-        source_keypoints = self._wrapper.transform_keypoint(source_info)
-        source_feature = self._wrapper.extract_feature_3d(source)
         active_lip = sequence.lip_vector if lip_vector is None else lip_vector
         if active_lip.shape != (sequence.frame_count, 18):
             raise ValueError("lip_vector shape does not match the motion sequence")
+        source_info, source_keypoints, source_feature = self._prepare_source_context(source_frame)
+        return self._render_prepared(
+            source_frame,
+            sequence,
+            mode=mode,
+            active_lip=active_lip,
+            source_info=source_info,
+            source_keypoints=source_keypoints,
+            source_feature=source_feature,
+        )
+
+    def reconstruct_lip_vectors(
+        self,
+        source_frame: np.ndarray,
+        sequence: MotionSequence,
+        lip_vectors: Sequence[np.ndarray],
+    ) -> list[np.ndarray]:
+        """Render lip-only candidates while extracting source features once."""
+
+        _validate_source_frame(source_frame)
+        self._validate_sequence(sequence)
+        active_vectors = tuple(lip_vectors)
+        for lip_vector in active_vectors:
+            if lip_vector.shape != (sequence.frame_count, 18):
+                raise ValueError("lip_vector shape does not match the motion sequence")
+        source_info, source_keypoints, source_feature = self._prepare_source_context(source_frame)
+        if not active_vectors:
+            return []
+        combined = np.concatenate(active_vectors, axis=0)
+        rendered = self._render_prepared(
+            source_frame,
+            sequence,
+            mode="lip_only",
+            active_lip=combined,
+            source_info=source_info,
+            source_keypoints=source_keypoints,
+            source_feature=source_feature,
+        )
+        return [
+            rendered[start : start + sequence.frame_count]
+            for start in range(0, rendered.shape[0], sequence.frame_count)
+        ]
+
+    def _validate_sequence(self, sequence: MotionSequence) -> None:
+        if sequence.backend != self.name:
+            raise ValueError(
+                f"motion backend {sequence.backend!r} is incompatible with {self.name!r}"
+            )
+        if sequence.backend_revision != self.revision:
+            raise ValueError("motion artifact was extracted with another backend revision")
+
+    def _prepare_source_context(self, source_frame: np.ndarray) -> tuple[Any, Any, Any]:
+        source = self._wrapper.prepare_source(source_frame)
+        source_info = self._wrapper.get_kp_info(source)
+        return (
+            source_info,
+            self._wrapper.transform_keypoint(source_info),
+            self._wrapper.extract_feature_3d(source),
+        )
+
+    def _render_prepared(
+        self,
+        source_frame: np.ndarray,
+        sequence: MotionSequence,
+        *,
+        mode: ReconstructionMode,
+        active_lip: np.ndarray,
+        source_info: Any,
+        source_keypoints: Any,
+        source_feature: Any,
+    ) -> np.ndarray:
+        import torch
 
         rendered: list[np.ndarray] = []
+        frame_count = sequence.frame_count if mode == "full_motion" else int(active_lip.shape[0])
         batch_size = self._config.reconstruction_batch_size
-        for batch_start in range(0, sequence.frame_count, batch_size):
-            batch_end = min(batch_start + batch_size, sequence.frame_count)
+        for batch_start in range(0, frame_count, batch_size):
+            batch_end = min(batch_start + batch_size, frame_count)
             active_batch_size = batch_end - batch_start
             source_keypoints_batch = source_keypoints.repeat(active_batch_size, 1, 1)
             source_feature_batch = source_feature.repeat(

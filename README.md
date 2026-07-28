@@ -15,7 +15,14 @@ Milestone 3 的冻结 LivePortrait 运动提取与重建敏感性基线及三说
 同步 MPG 音轨和严格时间戳 log-Mel 修复已完成 CPU 数据验收，并已重新完成 E3
 三种子训练与 199 条样本的冻结重建评价。修正后的 GRU 在 validation/test 上均
 超过 train mean，但 test 仍未超过 zero motion，因此只支持有限可行性结论。
-残差传输与信道实验尚未开始。
+随后扩充到十说话人和 1,000 条样本；8/1/1 个身份隔离的 train/validation/test
+划分完成三种子训练及 200 条冻结重建，GRU 在 test 上同时超过 train mean 和
+zero motion。E4 无信道残差实验已完成 6,600 条运动空间固定预算结果，冻结
+LivePortrait 残差重建也已完成 200 条样本、4,600 条指标，失败数为 0。test
+上原始幅度 Top-K 在每帧仅保留 4/18 个残差值时，将相对 lip-only oracle 的
+嘴部 ROI MAE 从纯预测的 `5.299` 降至 `2.100`，NME 从 `0.02195` 降至
+`0.00789`。该结果证明真实残差存在可利用的稀疏上界，但发送端选择器、量化、
+AWGN 和 JSCC 尚未开始。
 
 研究路线：
 
@@ -75,6 +82,7 @@ outputs/{experiment_name}/{timestamp}/
 - [数据说明](data/README.md)
 - [运动与重建基线](docs/MOTION_BASELINE.md)
 - [音频到运动基线](docs/AUDIO_MOTION_BASELINE.md)
+- [预测残差基线](docs/RESIDUAL_BASELINE.md)
 - [第三方依赖说明](third_party/README.md)
 
 ## 研究边界

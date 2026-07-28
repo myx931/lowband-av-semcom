@@ -57,6 +57,13 @@ class _ThreadLocalMediaPipeFaceMeshBackend:
         for backend in instances:
             backend.close()
 
+    def reset(self) -> None:
+        """Reset the detector owned by the current metric thread."""
+
+        backend = getattr(self._local, "backend", None)
+        if backend is not None:
+            backend.reset()
+
 
 def run_prediction_reconstruction(
     settings: AudioMotionSettings,

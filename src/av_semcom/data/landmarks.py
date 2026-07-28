@@ -112,6 +112,11 @@ class MediaPipeFaceMeshBackend:
 
         self._mesh.close()
 
+    def reset(self) -> None:
+        """Reset tracking state before an independent frame sequence."""
+
+        self._mesh.reset()
+
 
 def extract_landmark_sequence(
     frame_paths: list[Path],

@@ -32,3 +32,27 @@ PYTHONPATH=src python scripts/eval/show_reconstruction_progress.py \
 ```
 
 增加 `--watch 10` 每 10 秒刷新；增加 `--json` 输出机器可读快照。
+
+E4 先在 Python 3.11 环境运行不需要 GPU 的残差分析：
+
+```bash
+PYTHONPATH=src python scripts/eval/analyze_prediction_residuals.py \
+  --config configs/experiment/residual_baseline_ten_speaker.yaml \
+  --e3-run-dir outputs/audio_to_motion_ten_speaker/<timestamp>
+```
+
+随后在 LivePortrait Python 3.10 环境运行冻结重建评价：
+
+```bash
+PYTHONPATH=src python scripts/eval/reconstruct_prediction_residuals.py \
+  --config configs/experiment/residual_baseline_ten_speaker.yaml \
+  --e3-run-dir outputs/audio_to_motion_ten_speaker/<timestamp> \
+  --run-dir outputs/residual_baseline/<timestamp> \
+  --resume --reconstruction-batch-size 56 --metric-workers 8
+```
+
+横轴 `K` 表示每个有效非参考帧保留的残差元素数，不是经过编码和信道传输后的
+真实码率。实验同时报告原始幅度、训练集归一化幅度和随机固定预算选择。正式
+十说话人运行应产生 200 个样本文件和 4,600 条重建指标，完成标记中的
+`sample_count/result_count` 应为 `200/4600`，失败数应为 0；匹配完成标记的
+`--resume` 不得改写已有产物。

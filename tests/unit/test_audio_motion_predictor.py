@@ -237,6 +237,7 @@ def test_parallel_landmarks_use_one_backend_per_worker(
         def __init__(self) -> None:
             self.owner = threading.get_ident()
             self.closed = False
+            self.reset_count = 0
             instances.append(self)
 
         def detect(self, rgb_image: np.ndarray) -> None:
@@ -247,6 +248,10 @@ def test_parallel_landmarks_use_one_backend_per_worker(
         def close(self) -> None:
             self.closed = True
 
+        def reset(self) -> None:
+            assert threading.get_ident() == self.owner
+            self.reset_count += 1
+
     instances: list[ThreadBoundLandmarks] = []
     monkeypatch.setattr(
         reconstruction,
@@ -255,10 +260,16 @@ def test_parallel_landmarks_use_one_backend_per_worker(
     )
     landmarks = reconstruction._ThreadLocalMediaPipeFaceMeshBackend()
     frame = np.zeros((8, 8, 3), dtype=np.uint8)
+
+    def detect_and_reset(image: np.ndarray) -> None:
+        landmarks.detect(image)
+        landmarks.reset()
+
     with ThreadPoolExecutor(max_workers=2) as executor:
-        results = list(executor.map(landmarks.detect, (frame, frame)))
+        results = list(executor.map(detect_and_reset, (frame, frame)))
     landmarks.close()
 
     assert results == [None, None]
     assert len(instances) == 2
+    assert all(instance.reset_count == 1 for instance in instances)
     assert all(instance.closed for instance in instances)
