@@ -187,6 +187,107 @@ class ResidualScorerSettings:
         )
 
 
+@dataclass(frozen=True)
+class ScorerAblationVariant:
+    """One frozen cell in the validation-only 2x2 scorer ablation."""
+
+    name: str
+    use_snr: bool
+    velocity_weight: float
+
+
+@dataclass(frozen=True)
+class ResidualScorerAblationSettings:
+    """Resolved settings for the validation-only scorer diagnosis."""
+
+    output_root: Path
+    channel_uses: tuple[int, ...]
+    variants: tuple[ScorerAblationVariant, ...]
+    calibration_sample_count: int
+    partition_salt: str
+    config: Mapping[str, Any]
+
+    @classmethod
+    def from_config(
+        cls,
+        config: Mapping[str, Any],
+        jscc: JSCCSettings,
+        scorer: ResidualScorerSettings,
+    ) -> ResidualScorerAblationSettings:
+        """Validate a complete 2x2 SNR-input and velocity-loss factorial."""
+
+        raw = config.get("residual_scorer_ablation")
+        if not isinstance(raw, Mapping):
+            raise ConfigError("residual_scorer_ablation configuration must be a mapping")
+        channel_raw = raw.get("channel_uses")
+        if not isinstance(channel_raw, list) or not channel_raw:
+            raise ConfigError("residual_scorer_ablation.channel_uses must be a non-empty list")
+        channel_uses = tuple(int(value) for value in channel_raw)
+        if channel_uses != tuple(sorted(set(channel_uses))):
+            raise ConfigError("ablation channel uses must be sorted and unique")
+        if not set(channel_uses) <= set(jscc.channel_uses):
+            raise ConfigError("ablation channel uses must be configured E5 budgets")
+
+        variants_raw = raw.get("variants")
+        if not isinstance(variants_raw, Mapping) or not variants_raw:
+            raise ConfigError("residual_scorer_ablation.variants must be a mapping")
+        variants: list[ScorerAblationVariant] = []
+        factor_cells: set[tuple[bool, float]] = set()
+        for name, payload in variants_raw.items():
+            if not isinstance(name, str) or not name or not isinstance(payload, Mapping):
+                raise ConfigError("each scorer ablation variant must be a named mapping")
+            use_snr = payload.get("use_snr")
+            if not isinstance(use_snr, bool):
+                raise ConfigError(f"ablation variant {name}.use_snr must be boolean")
+            velocity_weight = float(payload.get("velocity_weight", -1.0))
+            if velocity_weight not in {0.0, scorer.velocity_weight}:
+                raise ConfigError(
+                    f"ablation variant {name}.velocity_weight must be 0 or {scorer.velocity_weight}"
+                )
+            cell = (use_snr, velocity_weight)
+            if cell in factor_cells:
+                raise ConfigError(f"duplicate scorer ablation factor cell: {cell}")
+            factor_cells.add(cell)
+            variants.append(
+                ScorerAblationVariant(
+                    name=name,
+                    use_snr=use_snr,
+                    velocity_weight=velocity_weight,
+                )
+            )
+        expected_cells = {
+            (use_snr, velocity_weight)
+            for use_snr in (False, True)
+            for velocity_weight in (0.0, scorer.velocity_weight)
+        }
+        if factor_cells != expected_cells:
+            raise ConfigError("scorer ablation must contain the complete 2x2 factor grid")
+
+        calibration_count = int(raw.get("calibration_sample_count", 50))
+        if calibration_count <= 0:
+            raise ConfigError("ablation calibration_sample_count must be positive")
+        partition_salt = str(raw.get("partition_salt", "scorer-ablation-v1"))
+        if not partition_salt:
+            raise ConfigError("ablation partition_salt must be non-empty")
+        output_raw = raw.get(
+            "output_dir",
+            "outputs/residual_scorer_validation_ablation",
+        )
+        if not isinstance(output_raw, str) or not output_raw:
+            raise ConfigError("ablation output_dir must be a non-empty path")
+        output_root = Path(output_raw)
+        if not output_root.is_absolute():
+            output_root = Path(__file__).resolve().parents[4] / output_root
+        return cls(
+            output_root=output_root.resolve(),
+            channel_uses=channel_uses,
+            variants=tuple(variants),
+            calibration_sample_count=calibration_count,
+            partition_salt=partition_salt,
+            config=dict(raw),
+        )
+
+
 def _positive_int(config: Mapping[str, Any], key: str, default: int) -> int:
     value = int(config.get(key, default))
     if value <= 0:

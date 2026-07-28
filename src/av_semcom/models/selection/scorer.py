@@ -36,6 +36,7 @@ class ChannelAwareResidualScorer(nn.Module):
         hidden_dim: int = 64,
         temperature: float = 1.0,
         max_channel_uses: int = 4,
+        use_snr: bool = True,
     ) -> None:
         super().__init__()
         if motion_std.shape != (18,) or not torch.isfinite(motion_std).all():
@@ -47,6 +48,7 @@ class ChannelAwareResidualScorer(nn.Module):
         self.register_buffer("motion_std", motion_std.detach().float().clone())
         self.temperature = float(temperature)
         self.max_channel_uses = int(max_channel_uses)
+        self.use_snr = bool(use_snr)
         self.network = nn.Sequential(
             nn.Linear(18 * 3 + 3, hidden_dim),
             nn.ReLU(),
@@ -72,13 +74,9 @@ class ChannelAwareResidualScorer(nn.Module):
         raw = normalized_residual * self.motion_std
         delta = torch.zeros_like(raw)
         delta[:, 1:] = torch.abs(raw[:, 1:] - raw[:, :-1])
-        snr_feature = (
-            _broadcast_scalar_feature(
-                snr_db,
-                normalized_residual,
-            )
-            / 10.0
-        )
+        snr_feature = _broadcast_scalar_feature(snr_db, normalized_residual) / 10.0
+        if not self.use_snr:
+            snr_feature = torch.zeros_like(snr_feature)
         budget_feature = torch.full_like(snr_feature, k / 18.0)
         channel_feature = torch.full_like(
             snr_feature,

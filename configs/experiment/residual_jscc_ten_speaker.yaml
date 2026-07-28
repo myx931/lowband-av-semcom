@@ -132,3 +132,22 @@ residual_scorer:
   validation_snr_db: [0.5, 2.5, 4.5, 6.5, 8.5]
   noise_seeds: [42, 43, 44]
   random_seeds: [42, 43, 44]
+
+residual_scorer_ablation:
+  output_dir: outputs/residual_scorer_validation_ablation
+  channel_uses: [3, 4]
+  calibration_sample_count: 50
+  partition_salt: scorer-ablation-v1
+  variants:
+    full:
+      use_snr: true
+      velocity_weight: 0.5
+    no_snr:
+      use_snr: false
+      velocity_weight: 0.5
+    no_velocity:
+      use_snr: true
+      velocity_weight: 0.0
+    no_snr_no_velocity:
+      use_snr: false
+      velocity_weight: 0.0
