@@ -111,6 +111,7 @@ class JSCCSettings:
                     "channel_gate",
                     "residual_scorer",
                     "residual_scorer_ablation",
+                    "communication_report",
                 }
             },
         )
