@@ -102,7 +102,11 @@ class JSCCSettings:
             validation_snr_db=validation_snr,
             test_snr_db=test_snr,
             noise_seeds=noise_seeds,
-            config={key: value for key, value in config.items() if key != "jscc_reconstruction"},
+            config={
+                key: value
+                for key, value in config.items()
+                if key not in {"jscc_reconstruction", "channel_gate"}
+            },
         )
 
     def require_formal_backend(self) -> None:
